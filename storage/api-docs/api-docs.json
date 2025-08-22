@@ -1,0 +1,2821 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "McDee Platform API",
+        "description": "Multifunctional Marketplace & Services API",
+        "contact": {
+            "email": "support@mcdee.test"
+        },
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://127.0.0.1:8000",
+            "description": "Local Server"
+        }
+    ],
+    "paths": {
+        "/api/apartment/bookings": {
+            "get": {
+                "tags": [
+                    "Apartment Bookings"
+                ],
+                "summary": "Get my apartment bookings",
+                "operationId": "1024bba4fdcc966175c70c8f1e093e46",
+                "responses": {
+                    "200": {
+                        "description": "List of bookings"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Apartment Bookings"
+                ],
+                "summary": "Book an apartment",
+                "operationId": "b9e7c7b2de839b4bcab677e31f7bba87",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "apartment_id",
+                                    "check_in",
+                                    "check_out"
+                                ],
+                                "properties": {
+                                    "apartment_id": {
+                                        "type": "integer"
+                                    },
+                                    "check_in": {
+                                        "type": "string",
+                                        "format": "date"
+                                    },
+                                    "check_out": {
+                                        "type": "string",
+                                        "format": "date"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Booking created"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/apartments": {
+            "get": {
+                "tags": [
+                    "Service Apartments"
+                ],
+                "summary": "List all apartments",
+                "operationId": "a8e6ba6dd64e1e9208b735934467a0be",
+                "responses": {
+                    "200": {
+                        "description": "List of apartments"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Service Apartments"
+                ],
+                "summary": "Add new apartment (Vendor only)",
+                "operationId": "c40dbd16366fb6f100e6bbf98eee2768",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "title",
+                                    "location",
+                                    "price_per_night",
+                                    "type"
+                                ],
+                                "properties": {
+                                    "title": {
+                                        "type": "string",
+                                        "example": "Luxury Shortlet Apartment"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Spacious apartment with sea view."
+                                    },
+                                    "location": {
+                                        "type": "string",
+                                        "example": "Lekki Phase 1, Lagos"
+                                    },
+                                    "price_per_night": {
+                                        "type": "number",
+                                        "example": 25000
+                                    },
+                                    "type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "hotel",
+                                            "hostel",
+                                            "shortlet"
+                                        ],
+                                        "example": "shortlet"
+                                    },
+                                    "images": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string",
+                                            "example": "image1.jpg"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Apartment created"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/apartments/{id}": {
+            "get": {
+                "tags": [
+                    "Service Apartments"
+                ],
+                "summary": "Get apartment details",
+                "operationId": "8731d0bfce1620b0c185afb5bda9c6db",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Apartment details"
+                    }
+                }
+            }
+        },
+        "/api/ride/location/update": {
+            "post": {
+                "tags": [
+                    "Ride Hailing"
+                ],
+                "summary": "Update GPS location for a ride",
+                "operationId": "587cc0564bda4928df72e00080d33dfc",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "ride_id": {
+                                        "type": "integer"
+                                    },
+                                    "lat": {
+                                        "type": "number"
+                                    },
+                                    "lng": {
+                                        "type": "number"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "GPS logged"
+                    }
+                }
+            }
+        },
+        "/api/maintenance/request": {
+            "post": {
+                "tags": [
+                    "Auto Maintenance"
+                ],
+                "summary": "Submit a vehicle maintenance request",
+                "operationId": "a4d9533d5cca40e4148dc02ddd1af40e",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "location": {
+                                        "type": "string",
+                                        "example": "123 Main Street, Lagos"
+                                    },
+                                    "service_type": {
+                                        "type": "string",
+                                        "example": "Engine Repair"
+                                    },
+                                    "issue": {
+                                        "type": "string",
+                                        "example": "Car won’t start and makes noise"
+                                    },
+                                    "needs_towing": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Request created successfully"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/maintenance/my-requests": {
+            "get": {
+                "tags": [
+                    "Auto Maintenance"
+                ],
+                "summary": "Get logged-in user's maintenance requests",
+                "operationId": "d0d27bcd7a9c084cb5634d16873155c2",
+                "responses": {
+                    "200": {
+                        "description": "List of maintenance requests"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/maintenance/update-status": {
+            "put": {
+                "tags": [
+                    "Auto Maintenance"
+                ],
+                "summary": "Update the status of a maintenance request",
+                "operationId": "24359462f23e0b7834a9d1388d1b98b0",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "request_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "accepted",
+                                            "completed",
+                                            "cancelled"
+                                        ],
+                                        "example": "accepted"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Status updated"
+                    },
+                    "404": {
+                        "description": "Request not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/ride/request": {
+            "post": {
+                "tags": [
+                    "Ride Hailing"
+                ],
+                "summary": "Request a ride",
+                "operationId": "28fe8f8ee86fabf1561b68865f92b14b",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "pickup_lat": {
+                                        "type": "number"
+                                    },
+                                    "pickup_lng": {
+                                        "type": "number"
+                                    },
+                                    "dropoff_lat": {
+                                        "type": "number"
+                                    },
+                                    "dropoff_lng": {
+                                        "type": "number"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Ride created"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/ride/update-status": {
+            "put": {
+                "tags": [
+                    "Ride Hailing"
+                ],
+                "summary": "Update ride status",
+                "operationId": "03ac2eea29ca76ab96272c27231e3320",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "ride_id": {
+                                        "type": "integer"
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "on_trip",
+                                            "completed",
+                                            "cancelled"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Status updated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/ride/history": {
+            "get": {
+                "tags": [
+                    "Ride Hailing"
+                ],
+                "summary": "Get ride history",
+                "operationId": "71dc7f2b11e22a6e1f6e601263023896",
+                "responses": {
+                    "200": {
+                        "description": "List of rides"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/ride/online": {
+            "post": {
+                "tags": [
+                    "Ride Hailing"
+                ],
+                "summary": "Set rider online",
+                "operationId": "62fabb36cf75595ba17def019828a738",
+                "responses": {
+                    "200": {
+                        "description": "Rider is now online"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/ride/offline": {
+            "post": {
+                "tags": [
+                    "Ride Hailing"
+                ],
+                "summary": "Set rider offline",
+                "operationId": "6a063441e2de6453535bf7870eaf2d12",
+                "responses": {
+                    "200": {
+                        "description": "Rider is now offline"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/ride/rate": {
+            "post": {
+                "tags": [
+                    "Ride Hailing"
+                ],
+                "summary": "Rate a completed ride",
+                "operationId": "44ab5cf6e8e89bec8e07419341098e7f",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "ride_id": {
+                                        "type": "integer"
+                                    },
+                                    "rating": {
+                                        "type": "integer"
+                                    },
+                                    "comment": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Rating submitted"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/subscribe": {
+            "post": {
+                "tags": [
+                    "Subscription"
+                ],
+                "summary": "Subscribe to the newsletter",
+                "description": "Stores an email for newsletter subscription",
+                "operationId": "d2480cefcfc2babef16b2bb389cf09bb",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "example": "user@example.com"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Subscription successful"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/api/register": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Register a new user or vendor",
+                "description": "Register a new user or vendor",
+                "operationId": "ca7c0cb6772de9bffbb8c896980cebc8",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "phone",
+                                    "email",
+                                    "password",
+                                    "user_type"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "John Doe"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "08012345678"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "example": "john@example.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "example": "secret123"
+                                    },
+                                    "user_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "user",
+                                            "vendor"
+                                        ],
+                                        "example": "vendor"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "User registered",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "token": {
+                                            "type": "string",
+                                            "example": "your_token_here"
+                                        },
+                                        "user": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "name": {
+                                                    "type": "string",
+                                                    "example": "John Doe"
+                                                },
+                                                "email": {
+                                                    "type": "string",
+                                                    "example": "john@example.com"
+                                                },
+                                                "user_type": {
+                                                    "type": "string",
+                                                    "example": "vendor"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/login": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Login user or vendor",
+                "description": "Login user or vendor",
+                "operationId": "c373bc4cffa4a56fc64e3979b8ee7b96",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "example": "john@example.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "example": "secret123"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Login successful",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "token": {
+                                            "type": "string",
+                                            "example": "your_token_here"
+                                        },
+                                        "user": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "name": {
+                                                    "type": "string",
+                                                    "example": "John Doe"
+                                                },
+                                                "user_type": {
+                                                    "type": "string",
+                                                    "example": "vendor"
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "vendor": {
+                                            "properties": {
+                                                "category": {
+                                                    "type": "string",
+                                                    "example": "mechanic"
+                                                },
+                                                "is_verified": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/logout": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Logout the authenticated user",
+                "description": "Logout the authenticated user",
+                "operationId": "5ff2dc8b48bff52908d3821a0ecc9b3e",
+                "responses": {
+                    "200": {
+                        "description": "Logged out",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Logged out"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/me": {
+            "get": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Get the authenticated user",
+                "description": "Get authenticated user",
+                "operationId": "57d51f3fa328d534a6ee8562484d0687",
+                "responses": {
+                    "200": {
+                        "description": "User profile",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "id": {
+                                            "type": "integer",
+                                            "example": 1
+                                        },
+                                        "name": {
+                                            "type": "string",
+                                            "example": "John Doe"
+                                        },
+                                        "user_type": {
+                                            "type": "string",
+                                            "example": "vendor"
+                                        },
+                                        "vendor": {
+                                            "properties": {
+                                                "category": {
+                                                    "type": "string",
+                                                    "example": "rider"
+                                                },
+                                                "is_setup_complete": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/cart": {
+            "get": {
+                "tags": [
+                    "Cart"
+                ],
+                "summary": "Get current user's cart",
+                "operationId": "0652f94dde92e36bbb3c461356ce1d7b",
+                "responses": {
+                    "200": {
+                        "description": "Cart retrieved successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/cart/add": {
+            "post": {
+                "tags": [
+                    "Cart"
+                ],
+                "summary": "Add item to cart",
+                "operationId": "408de867ef91c8a1c1298be6461a5e3c",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "item_type",
+                                    "item_id",
+                                    "quantity"
+                                ],
+                                "properties": {
+                                    "item_type": {
+                                        "type": "string",
+                                        "example": "product"
+                                    },
+                                    "item_id": {
+                                        "type": "integer"
+                                    },
+                                    "quantity": {
+                                        "type": "integer",
+                                        "minimum": 1
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Item added to cart"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/cart/remove/{item_id}": {
+            "delete": {
+                "tags": [
+                    "Cart"
+                ],
+                "summary": "Remove item from cart",
+                "operationId": "384f6db375db64ec88cc644b8a8d023e",
+                "parameters": [
+                    {
+                        "name": "item_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Item removed from cart"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/cart/clear": {
+            "delete": {
+                "tags": [
+                    "Cart"
+                ],
+                "summary": "Clear entire cart",
+                "operationId": "c2cf94402630acad1cc6d317ec806693",
+                "responses": {
+                    "200": {
+                        "description": "Cart cleared"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/food/menus": {
+            "get": {
+                "tags": [
+                    "Food"
+                ],
+                "summary": "List all food menus",
+                "operationId": "2d1875e0f4042ce23c28115b24b58880",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Food"
+                ],
+                "summary": "Create a food menu (Vendor only)",
+                "operationId": "ca1b9300715e3ee343b7cc34343a068d",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "price"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "type": "string"
+                                    },
+                                    "price": {
+                                        "type": "number",
+                                        "format": "float"
+                                    },
+                                    "image": {
+                                        "type": "string",
+                                        "example": "https://...jpg"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Food menu created"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/food/orders": {
+            "get": {
+                "tags": [
+                    "Food"
+                ],
+                "summary": "Get user's food orders",
+                "operationId": "bfec2326941a1ab4618cee7f3fe391c1",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Food"
+                ],
+                "summary": "Place a food order",
+                "operationId": "ef3250d3c12f9f0231145fd634ed0b55",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "vendor_id": {
+                                        "type": "integer"
+                                    },
+                                    "items": {
+                                        "type": "array",
+                                        "items": {
+                                            "properties": {
+                                                "menu_id": {
+                                                    "type": "integer"
+                                                },
+                                                "quantity": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Order placed"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/food/orders/{id}/status": {
+            "put": {
+                "tags": [
+                    "Food"
+                ],
+                "summary": "Update food order status (Vendor only)",
+                "operationId": "ff8fb51e9265cbaab694664f583fdac3",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "status"
+                                ],
+                                "properties": {
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "pending",
+                                            "preparing",
+                                            "delivered",
+                                            "cancelled"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Order status updated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/orders": {
+            "get": {
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Get current user's orders",
+                "operationId": "08317b752b9a6625cb3123949ef4022b",
+                "responses": {
+                    "200": {
+                        "description": "List of user's orders"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Place a new order",
+                "operationId": "d690d6834318e9b064df441e854de8b9",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "items"
+                                ],
+                                "properties": {
+                                    "items": {
+                                        "type": "array",
+                                        "items": {
+                                            "properties": {
+                                                "product_id": {
+                                                    "type": "integer"
+                                                },
+                                                "quantity": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Order placed successfully"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/orders/vendor": {
+            "get": {
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Get orders for vendor's products",
+                "operationId": "0ae6b9e4a682706af88fd1e56854dbb9",
+                "responses": {
+                    "200": {
+                        "description": "List of vendor's orders"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/orders/{id}/status": {
+            "put": {
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Update order status (e.g., processing, completed)",
+                "operationId": "a6abe7e1fd2257d370bf832e8075f50c",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "status"
+                                ],
+                                "properties": {
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "processing",
+                                            "completed",
+                                            "cancelled"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Status updated"
+                    },
+                    "403": {
+                        "description": "Unauthorized or not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/products": {
+            "get": {
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Get all products",
+                "operationId": "1bfaa78d1c2c3848ab8165c5dadcad3e",
+                "responses": {
+                    "200": {
+                        "description": "List of products"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Create a product (vendor only)",
+                "operationId": "e8185e307706e2cd84bbcf5171e2f09d",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "price",
+                                    "stock"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "price": {
+                                        "type": "number",
+                                        "format": "float"
+                                    },
+                                    "stock": {
+                                        "type": "integer"
+                                    },
+                                    "category_id": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Product created"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/products/{id}": {
+            "get": {
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Get a single product by ID",
+                "operationId": "7ab21ddb713501f3d4c2914892c02a21",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID of the product",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Product details"
+                    },
+                    "404": {
+                        "description": "Product not found"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Update a product (vendor only)",
+                "operationId": "6a7e11900844cd85cff66e662b82bd4c",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID of the product",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "price": {
+                                        "type": "number",
+                                        "format": "float"
+                                    },
+                                    "stock": {
+                                        "type": "integer"
+                                    },
+                                    "category_id": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Product updated"
+                    },
+                    "403": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Product not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Delete a product (vendor only)",
+                "operationId": "e80a6ca46716acee6b47ea1ac91663c0",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID of the product",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Product deleted"
+                    },
+                    "403": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Product not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/products/{id}/review": {
+            "post": {
+                "tags": [
+                    "Reviews"
+                ],
+                "summary": "Submit a review for a product",
+                "operationId": "69f8b1da60e1a74e4ad997e71f34b148",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Product ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "rating"
+                                ],
+                                "properties": {
+                                    "rating": {
+                                        "type": "integer",
+                                        "maximum": 5,
+                                        "minimum": 1
+                                    },
+                                    "comment": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Review submitted"
+                    },
+                    "404": {
+                        "description": "Product not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/ride/settings": {
+            "get": {
+                "tags": [
+                    "Ride Hailing Settings"
+                ],
+                "summary": "Get ride fare settings",
+                "operationId": "fb7f24c8a9d003a265dd0b6b6c79246e",
+                "responses": {
+                    "200": {
+                        "description": "Returns current fare settings"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Ride Hailing Settings"
+                ],
+                "summary": "Update fare settings (admin)",
+                "operationId": "23b8084b4a6d4a02d860df48f03cf96b",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "base_fare": {
+                                        "type": "number"
+                                    },
+                                    "rate_per_km": {
+                                        "type": "number"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Settings updated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/vendor/mechanic/setup": {
+            "post": {
+                "tags": [
+                    "Vendor - Mechanic"
+                ],
+                "summary": "Complete mechanic vendor registration",
+                "description": "Complete Mechanic Registration",
+                "operationId": "6cb42b4cc9582759d93dae37051d018d",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "workshop_name": {
+                                        "type": "string",
+                                        "example": "FixIt Autos"
+                                    },
+                                    "services_offered": {
+                                        "type": "string",
+                                        "example": "Oil change, Engine diagnostics"
+                                    },
+                                    "location": {
+                                        "type": "string",
+                                        "example": "Ikeja, Lagos"
+                                    },
+                                    "contact_number": {
+                                        "type": "string",
+                                        "example": "+2348012345678"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Mechanic profile completed successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Mechanic profile completed successfully"
+                                        },
+                                        "mechanic": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "user_id": {
+                                                    "type": "integer",
+                                                    "example": 5
+                                                },
+                                                "vendor_id": {
+                                                    "type": "integer",
+                                                    "example": 2
+                                                },
+                                                "workshop_name": {
+                                                    "type": "string",
+                                                    "example": "FixIt Autos"
+                                                },
+                                                "services_offered": {
+                                                    "type": "string",
+                                                    "example": "Oil change, Engine diagnostics"
+                                                },
+                                                "location": {
+                                                    "type": "string",
+                                                    "example": "Ikeja, Lagos"
+                                                },
+                                                "contact_number": {
+                                                    "type": "string",
+                                                    "example": "+2348012345678"
+                                                },
+                                                "status": {
+                                                    "type": "string",
+                                                    "example": "pending"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/vendor/mechanic/profile": {
+            "get": {
+                "tags": [
+                    "Vendor - Mechanic"
+                ],
+                "summary": "Get current mechanic profile",
+                "description": "Get Mechanic Profile",
+                "operationId": "b710d43655ffef1a8a78bfea1d7c64e9",
+                "responses": {
+                    "200": {
+                        "description": "Successful response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "mechanic": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "user_id": {
+                                                    "type": "integer",
+                                                    "example": 5
+                                                },
+                                                "vendor_id": {
+                                                    "type": "integer",
+                                                    "example": 2
+                                                },
+                                                "workshop_name": {
+                                                    "type": "string",
+                                                    "example": "FixIt Autos"
+                                                },
+                                                "services_offered": {
+                                                    "type": "string",
+                                                    "example": "Oil change, Engine diagnostics"
+                                                },
+                                                "location": {
+                                                    "type": "string",
+                                                    "example": "Ikeja, Lagos"
+                                                },
+                                                "contact_number": {
+                                                    "type": "string",
+                                                    "example": "+2348012345678"
+                                                },
+                                                "status": {
+                                                    "type": "string",
+                                                    "example": "pending"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/vendor/product-vendor/setup": {
+            "post": {
+                "tags": [
+                    "Vendor - Product Vendor"
+                ],
+                "summary": "Complete product vendor setup",
+                "description": "Complete Product Vendor Setup",
+                "operationId": "2f6ef22ba50ff86c65596b2edb2d6e26",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "contact_person",
+                                    "store_address",
+                                    "store_phone"
+                                ],
+                                "properties": {
+                                    "contact_person": {
+                                        "type": "string",
+                                        "example": "John Doe"
+                                    },
+                                    "store_address": {
+                                        "type": "string",
+                                        "example": "123 Main Street, Ikeja"
+                                    },
+                                    "store_phone": {
+                                        "type": "string",
+                                        "example": "08012345678"
+                                    },
+                                    "store_email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "store@example.com"
+                                    },
+                                    "store_description": {
+                                        "type": "string",
+                                        "example": "We sell school bags and lunch boxes"
+                                    },
+                                    "logo": {
+                                        "type": "string",
+                                        "example": "https://example.com/logo.png"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Product vendor setup complete",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Product vendor setup complete"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "vendor_id": {
+                                                    "type": "integer",
+                                                    "example": 5
+                                                },
+                                                "contact_person": {
+                                                    "type": "string",
+                                                    "example": "John Doe"
+                                                },
+                                                "store_address": {
+                                                    "type": "string",
+                                                    "example": "123 Main Street, Ikeja"
+                                                },
+                                                "store_phone": {
+                                                    "type": "string",
+                                                    "example": "08012345678"
+                                                },
+                                                "store_email": {
+                                                    "type": "string",
+                                                    "example": "store@example.com"
+                                                },
+                                                "store_description": {
+                                                    "type": "string",
+                                                    "example": "We sell school bags and lunch boxes"
+                                                },
+                                                "logo": {
+                                                    "type": "string",
+                                                    "example": "https://example.com/logo.png"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/vendor/rider/complete-registration": {
+            "post": {
+                "tags": [
+                    "Vendor - Rider"
+                ],
+                "summary": "Complete rider registration",
+                "description": "Complete Rider Registration",
+                "operationId": "f376681c16a413f5d0b197e75cf7e729",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "vehicle_type"
+                                ],
+                                "properties": {
+                                    "vehicle_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "bike",
+                                            "tricycle",
+                                            "car"
+                                        ],
+                                        "example": "bike"
+                                    },
+                                    "license_number": {
+                                        "type": "string",
+                                        "example": "ABC123456"
+                                    },
+                                    "experience_years": {
+                                        "type": "integer",
+                                        "example": 3
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Rider profile created/updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Rider profile created/updated successfully"
+                                        },
+                                        "rider": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "user_id": {
+                                                    "type": "integer",
+                                                    "example": 2
+                                                },
+                                                "vendor_id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "vehicle_type": {
+                                                    "type": "string",
+                                                    "example": "bike"
+                                                },
+                                                "license_number": {
+                                                    "type": "string",
+                                                    "example": "ABC123456"
+                                                },
+                                                "experience_years": {
+                                                    "type": "integer",
+                                                    "example": 3
+                                                },
+                                                "status": {
+                                                    "type": "string",
+                                                    "example": "pending"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/vendor/rider/profile": {
+            "get": {
+                "tags": [
+                    "Vendor - Rider"
+                ],
+                "summary": "Get rider profile",
+                "description": "Get Rider Profile",
+                "operationId": "01ce3a9e5190c0285f6ac13f1de5ccb9",
+                "responses": {
+                    "200": {
+                        "description": "Rider profile retrieved",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "rider": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "user_id": {
+                                                    "type": "integer",
+                                                    "example": 2
+                                                },
+                                                "vendor_id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "vehicle_type": {
+                                                    "type": "string",
+                                                    "example": "bike"
+                                                },
+                                                "license_number": {
+                                                    "type": "string",
+                                                    "example": "ABC123456"
+                                                },
+                                                "experience_years": {
+                                                    "type": "integer",
+                                                    "example": 3
+                                                },
+                                                "status": {
+                                                    "type": "string",
+                                                    "example": "pending"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/vendor/service-apartment/setup": {
+            "post": {
+                "tags": [
+                    "Vendor - Service Apartment"
+                ],
+                "summary": "Setup service apartment vendor profile",
+                "description": "Complete service apartment vendor setup",
+                "operationId": "d90fdff1e4caead480aa3bace38be532",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "full_name",
+                                    "phone_number",
+                                    "organization_name",
+                                    "organization_address",
+                                    "years_of_experience"
+                                ],
+                                "properties": {
+                                    "full_name": {
+                                        "type": "string",
+                                        "example": "Jane Doe"
+                                    },
+                                    "phone_number": {
+                                        "type": "string",
+                                        "example": "+2348012345678"
+                                    },
+                                    "organization_name": {
+                                        "type": "string",
+                                        "example": "Apex Shortlet Homes"
+                                    },
+                                    "organization_address": {
+                                        "type": "string",
+                                        "example": "24 Allen Avenue, Ikeja, Lagos"
+                                    },
+                                    "website": {
+                                        "type": "string",
+                                        "format": "url",
+                                        "example": "https://apexshortlets.ng"
+                                    },
+                                    "years_of_experience": {
+                                        "type": "integer",
+                                        "example": 5
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Service apartment profile completed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Service apartment profile completed"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "vendor_id": {
+                                                    "type": "integer",
+                                                    "example": 12
+                                                },
+                                                "full_name": {
+                                                    "type": "string",
+                                                    "example": "Jane Doe"
+                                                },
+                                                "phone_number": {
+                                                    "type": "string",
+                                                    "example": "+2348012345678"
+                                                },
+                                                "organization_name": {
+                                                    "type": "string",
+                                                    "example": "Apex Shortlet Homes"
+                                                },
+                                                "organization_address": {
+                                                    "type": "string",
+                                                    "example": "24 Allen Avenue, Ikeja, Lagos"
+                                                },
+                                                "website": {
+                                                    "type": "string",
+                                                    "example": "https://apexshortlets.ng"
+                                                },
+                                                "years_of_experience": {
+                                                    "type": "integer",
+                                                    "example": 5
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/vendor/service-apartment/profile": {
+            "get": {
+                "tags": [
+                    "Vendor - Service Apartment"
+                ],
+                "summary": "Get vendor's service apartment profile",
+                "description": "Get service apartment profile",
+                "operationId": "e6052125fe614b7e9dba029d5100fa25",
+                "responses": {
+                    "200": {
+                        "description": "Retrieved profile",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "vendor_id": {
+                                                    "type": "integer",
+                                                    "example": 12
+                                                },
+                                                "full_name": {
+                                                    "type": "string",
+                                                    "example": "Jane Doe"
+                                                },
+                                                "phone_number": {
+                                                    "type": "string",
+                                                    "example": "+2348012345678"
+                                                },
+                                                "organization_name": {
+                                                    "type": "string",
+                                                    "example": "Apex Shortlet Homes"
+                                                },
+                                                "organization_address": {
+                                                    "type": "string",
+                                                    "example": "24 Allen Avenue, Ikeja, Lagos"
+                                                },
+                                                "website": {
+                                                    "type": "string",
+                                                    "example": "https://apexshortlets.ng"
+                                                },
+                                                "years_of_experience": {
+                                                    "type": "integer",
+                                                    "example": 5
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/vendor/service-vendor/setup": {
+            "post": {
+                "tags": [
+                    "Vendor - General Service Vendor"
+                ],
+                "summary": "Complete service vendor setup",
+                "description": "Complete setup for a service vendor\n\nStore or update a vendor's service profile details.",
+                "operationId": "43c257220a3056d466854cdd0d10dae2",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "service_name",
+                                    "location",
+                                    "phone"
+                                ],
+                                "properties": {
+                                    "service_name": {
+                                        "type": "string",
+                                        "example": "Plumbing Services"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "We offer top-notch plumbing and repair services"
+                                    },
+                                    "location": {
+                                        "type": "string",
+                                        "example": "Victoria Island, Lagos"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "08012345678"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "vendor@example.com"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Service vendor profile created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Service vendor profile created successfully"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "vendor_id": {
+                                                    "type": "integer",
+                                                    "example": 4
+                                                },
+                                                "service_name": {
+                                                    "type": "string",
+                                                    "example": "Plumbing Services"
+                                                },
+                                                "description": {
+                                                    "type": "string",
+                                                    "example": "We offer top-notch plumbing and repair services"
+                                                },
+                                                "location": {
+                                                    "type": "string",
+                                                    "example": "Victoria Island, Lagos"
+                                                },
+                                                "phone": {
+                                                    "type": "string",
+                                                    "example": "08012345678"
+                                                },
+                                                "email": {
+                                                    "type": "string",
+                                                    "format": "email",
+                                                    "example": "vendor@example.com"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/vendor/register": {
+            "post": {
+                "tags": [
+                    "Vendor"
+                ],
+                "summary": "Register vendor",
+                "description": "Register a new vendor\n\nRegister either an individual or business vendor.",
+                "operationId": "65afd508724830b605e16970e17b9808",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "vendor_type",
+                                    "category"
+                                ],
+                                "properties": {
+                                    "vendor_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "individual",
+                                            "business"
+                                        ],
+                                        "example": "individual"
+                                    },
+                                    "business_name": {
+                                        "type": "string",
+                                        "example": "McDee Motors"
+                                    },
+                                    "category": {
+                                        "type": "string",
+                                        "enum": [
+                                            "rider",
+                                            "mechanic",
+                                            "apartment",
+                                            "product_vendor",
+                                            "service_vendor"
+                                        ],
+                                        "example": "rider"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Vendor registered",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Vendor registered successfully"
+                                        },
+                                        "vendor": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "user_id": {
+                                                    "type": "integer",
+                                                    "example": 2
+                                                },
+                                                "vendor_type": {
+                                                    "type": "string",
+                                                    "example": "individual"
+                                                },
+                                                "business_name": {
+                                                    "type": "string",
+                                                    "example": "McDee Motors"
+                                                },
+                                                "category": {
+                                                    "type": "string",
+                                                    "example": "rider"
+                                                },
+                                                "is_verified": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Only vendor-type users can register as vendors"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/vendor/is-live": {
+            "get": {
+                "tags": [
+                    "Vendor"
+                ],
+                "summary": "Check vendor live status",
+                "description": "Get current vendor live status\n\nCheck if the authenticated vendor is verified and live.",
+                "operationId": "7d9f4ccea9690177a5e9486c9d7817ac",
+                "responses": {
+                    "200": {
+                        "description": "Live status response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "is_live": {
+                                            "type": "boolean",
+                                            "example": true
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/verification/initiate": {
+            "post": {
+                "tags": [
+                    "Vendor Verification"
+                ],
+                "summary": "Initiate vendor verification (NIN or CAC)",
+                "operationId": "e7256825430c1720e865e98ef9f7b870",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "type"
+                                ],
+                                "properties": {
+                                    "type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "NIN",
+                                            "CAC"
+                                        ],
+                                        "example": "NIN"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Verification initiated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Verification initiated"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Verification already started or completed"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/verification/submit": {
+            "post": {
+                "tags": [
+                    "Vendor Verification"
+                ],
+                "summary": "Submit verification value (NIN or CAC)",
+                "operationId": "567e2298597d5ecd853c5b1c1e85ed1f",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "value"
+                                ],
+                                "properties": {
+                                    "value": {
+                                        "type": "string",
+                                        "example": "12345678901"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Verification submitted",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Verification submitted"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No verification in progress"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/verification/status": {
+            "get": {
+                "tags": [
+                    "Vendor Verification"
+                ],
+                "summary": "Check vendor verification status",
+                "operationId": "d8e20d98e15f0f788b34783ef01a555c",
+                "responses": {
+                    "200": {
+                        "description": "Verification status",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "pending"
+                                        },
+                                        "type": {
+                                            "type": "string",
+                                            "example": "NIN"
+                                        },
+                                        "value": {
+                                            "type": "string",
+                                            "example": "12345678901"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/wallet": {
+            "get": {
+                "tags": [
+                    "Wallet"
+                ],
+                "summary": "Get wallet balance",
+                "operationId": "cf330ed040684a48febe3ec77318d6a6",
+                "responses": {
+                    "200": {
+                        "description": "Wallet balance",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "balance": {
+                                            "type": "number",
+                                            "example": 10000
+                                        },
+                                        "currency": {
+                                            "type": "string",
+                                            "example": "NGN"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/wallet/transactions": {
+            "get": {
+                "tags": [
+                    "Wallet"
+                ],
+                "summary": "Get wallet transaction history",
+                "operationId": "d7003c8f7d8d61b2b6b5b2d6f2377cc3",
+                "responses": {
+                    "200": {
+                        "description": "List of wallet transactions"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/wallet/transfer": {
+            "post": {
+                "tags": [
+                    "Wallet"
+                ],
+                "summary": "Transfer money to another user",
+                "operationId": "16a8c35042c0240bf65581c3c2d89d8c",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "receiver_id",
+                                    "amount"
+                                ],
+                                "properties": {
+                                    "receiver_id": {
+                                        "type": "integer",
+                                        "example": 2
+                                    },
+                                    "amount": {
+                                        "type": "number",
+                                        "example": 2500
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Transfer successful",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Transfer successful"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/wallet/fund": {
+            "post": {
+                "tags": [
+                    "Wallet"
+                ],
+                "summary": "Fund wallet using Paystack",
+                "operationId": "97e2f68eac4c6463b60278a0024d4d44",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "amount"
+                                ],
+                                "properties": {
+                                    "amount": {
+                                        "type": "number",
+                                        "example": 5000
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Funding initialized",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "payment_link": {
+                                            "type": "string",
+                                            "example": "https://paystack.com/pay/xxxxx"
+                                        },
+                                        "reference": {
+                                            "type": "string",
+                                            "example": "1234-xxxx-4567"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/wallet/webhook": {
+            "post": {
+                "tags": [
+                    "Wallet"
+                ],
+                "summary": "Paystack webhook for confirming wallet fund",
+                "operationId": "0e239eefce921518617a348309368a35",
+                "responses": {
+                    "200": {
+                        "description": "Webhook processed"
+                    }
+                }
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Apartment Bookings"
+        },
+        {
+            "name": "Service Apartments"
+        },
+        {
+            "name": "Ride Hailing"
+        },
+        {
+            "name": "Auto Maintenance"
+        },
+        {
+            "name": "Cart",
+            "description": "Cart endpoints"
+        },
+        {
+            "name": "Food",
+            "description": "Food Order APIs"
+        },
+        {
+            "name": "Products",
+            "description": "Product listing, viewing, creating, updating, and deleting"
+        },
+        {
+            "name": "Ride Hailing Settings"
+        },
+        {
+            "name": "Vendor Verification",
+            "description": "APIs for managing vendor verification using NIN or CAC"
+        },
+        {
+            "name": "Wallet",
+            "description": "Wallet operations such as view balance, fund wallet, transfer, and transactions"
+        },
+        {
+            "name": "Subscription",
+            "description": "Subscription"
+        },
+        {
+            "name": "Authentication",
+            "description": "Authentication"
+        },
+        {
+            "name": "Orders",
+            "description": "Orders"
+        },
+        {
+            "name": "Reviews",
+            "description": "Reviews"
+        },
+        {
+            "name": "Vendor - Mechanic",
+            "description": "Vendor - Mechanic"
+        },
+        {
+            "name": "Vendor - Product Vendor",
+            "description": "Vendor - Product Vendor"
+        },
+        {
+            "name": "Vendor - Rider",
+            "description": "Vendor - Rider"
+        },
+        {
+            "name": "Vendor - Service Apartment",
+            "description": "Vendor - Service Apartment"
+        },
+        {
+            "name": "Vendor - General Service Vendor",
+            "description": "Vendor - General Service Vendor"
+        },
+        {
+            "name": "Vendor",
+            "description": "Vendor"
+        }
+    ]
+}
