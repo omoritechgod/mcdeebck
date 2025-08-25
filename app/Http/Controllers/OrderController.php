@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
@@ -41,32 +42,45 @@ class OrderController extends Controller
             'items.*.quantity' => 'required|integer|min:1',
         ]);
 
-        $total = 0;
-        foreach ($request->items as $item) {
-            $product = Product::find($item['product_id']);
-            $total += $product->price * $item['quantity'];
-        }
+        $order = DB::transaction(function () use ($request) {
+            $total = 0;
 
-        $order = Order::create([
-            'user_id' => Auth::id(),
-            'total' => $total,
-            'status' => 'pending',
-        ]);
+            foreach ($request->items as $item) {
+                $product = Product::findOrFail($item['product_id']);
 
-        foreach ($request->items as $item) {
-            $product = Product::find($item['product_id']);
+                if ($product->stock < $item['quantity']) {
+                    throw new \Exception("Not enough stock for {$product->name}");
+                }
 
-            OrderItem::create([
-                'order_id' => $order->id,
-                'product_id' => $product->id,
-                'quantity' => $item['quantity'],
-                'price' => $product->price,
+                $total += $product->price * $item['quantity'];
+            }
+
+            $order = Order::create([
+                'user_id' => Auth::id(),
+                'total' => $total,
+                'status' => 'pending',
             ]);
 
-            $product->decrement('stock', $item['quantity']);
-        }
+            foreach ($request->items as $item) {
+                $product = Product::findOrFail($item['product_id']);
 
-        return response()->json(['message' => 'Order placed', 'order' => $order]);
+                OrderItem::create([
+                    'order_id' => $order->id,
+                    'product_id' => $product->id,
+                    'quantity' => $item['quantity'],
+                    'price' => $product->price,
+                ]);
+
+                $product->decrement('stock', $item['quantity']);
+            }
+
+            return $order; // return order from transaction
+        });
+
+        return response()->json([
+            'message' => 'Order placed',
+            'order'   => $order
+        ]);
     }
 
     /**
@@ -81,8 +95,8 @@ class OrderController extends Controller
     public function userOrders()
     {
         $orders = Order::where('user_id', Auth::id())
-                       ->with('items.product')
-                       ->latest()->get();
+            ->with('items.product')
+            ->latest()->get();
 
         return response()->json($orders);
     }

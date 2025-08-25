@@ -34,10 +34,10 @@ class ProductUpdateRequest extends FormRequest
 
             'condition' => ['required', Rule::in(['old', 'new'])],
 
-            'image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'image' => 'required|url',
 
             'images' => 'nullable|array',
-            'images.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'images.*' => 'nullable|url',,
         ];
     }
 }

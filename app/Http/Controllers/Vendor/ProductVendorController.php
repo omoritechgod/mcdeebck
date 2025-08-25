@@ -48,17 +48,14 @@ class ProductVendorController extends Controller
 
         $product = new Product();
 
-        if ($request->hasFile('image')) {
-            $image = $request->file('image');
-            $fileName = $image->store('', 'public');
-            $filePath = 'uploads/' . $fileName;
-            $product->image = $filePath;
-        }
+
         $product->name = $request->name;
         $product->description = $request->description;
         $product->price = $request->price;
         $product->condition = $request->condition;
-        $product->status = $request->status ?? 'active';
+        if ($request->filled('image')) {
+            $product->image = $request->image;
+        }
 
         $product->product_category_id = $request->product_category_id;
         $product->vendor_id = $vendor->id;
@@ -74,16 +71,19 @@ class ProductVendorController extends Controller
             }
         }
         // Save additional images
-        if ($request->hasFile('images')) {
-            foreach ($request->images as $image) {
-                $fileName = $image->store('', 'public');
-                $filePath = 'uploads/products/' . $fileName;
+        if ($request->filled('images')) {
+            foreach ($request->images as $imageUrl) {
                 ProductImage::create([
-                    'image_path' => $filePath,
-                    'product_id' => $product->id
+                    'product_id' => $product->id,
+                    'image_path' => $imageUrl
                 ]);
             }
         }
+
+        return response()->json([
+            'status' => 'ok',
+            'message' => 'product created successfully'
+        ], 200);
     }
 
     public function show(string $id)
@@ -112,21 +112,16 @@ class ProductVendorController extends Controller
 
         $product = Product::findOrFail($id);
 
-
-        if ($request->hasFile('image')) {
-            File::delete(public_path('storage/' . $product->image));
-            $image = $request->file('image');
-            $fileName = $image->store('', 'public');
-            $filePath = 'uploads/' . $fileName;
-
-            $product->image = $filePath;
-        };
-
         $product->name = $request->name;
         $product->description = $request->description;
         $product->price = $request->price;
         $product->product_category_id = $request->product_category_id;
         $product->condition = $request->condition;
+
+        if ($request->filled('image')) {
+            $product->image = $request->image;
+        }
+
         $product->status = $request->status ?? 'active';
         $product->vendor_id = $request->vendor_id;
 
@@ -142,18 +137,13 @@ class ProductVendorController extends Controller
             }
         }
 
-        if ($request->hasFile('images')) {
-            foreach ($product->images as $image) {
-                File::delete(public_path($image->path));
-            }
+        if ($request->filled('images')) {
             $product->images()->delete();
 
-            foreach ($request->images as $image) {
-                $fileName = $image->store('', 'public');
-                $filePath = "uploads/" . $fileName;
+            foreach ($request->images as $imageUrl) {
                 ProductImage::create([
                     'product_id' => $product->id,
-                    'Image_path' => $filePath,
+                    'image_path' => $imageUrl
                 ]);
             }
         }
@@ -177,15 +167,9 @@ class ProductVendorController extends Controller
             return response()->json(['message' => 'Product Not Found']);
         }
         $product->colors()->delete();
-
-        if ($product->image && file_exists(public_path('storage/' . $product->image))) {
-            File::delete(public_path('storage/' . $product->image));
-        }
-        foreach ($product->images as $image) {
-            if ($image->image_path && file_exists(public_path('storage/' . $image->image_path))) {
-                File::delete(public_path('storage/' . $image->image_path));
-            }
-        }
+        $product->image()->delete();
+        
+        // multiple images
         $product->images()->delete();
         $product->delete();
 

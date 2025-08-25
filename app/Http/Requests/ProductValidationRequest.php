@@ -32,10 +32,10 @@ class ProductValidationRequest extends FormRequest
             'product_category_id' => 'required|exists:product_categories,id',
             'condition' => ['required', Rule::in(['new', 'old'])],
             'stock' => 'required|integer|min:1',
-            'image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'image' => 'required|url',
 
             'images' => 'nullable|array',
-            'images.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'images.*' => 'nullable|url',
         ];
     }
 }
