@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
     
         {
             $this->call(AdminWalletSeeder::class);
+            $this->call(ProductCategory::class);
         }
 
 

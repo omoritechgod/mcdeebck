@@ -15,14 +15,14 @@ return new class extends Migration
             $table->id();
             $table->foreignId('vendor_id')->constrained('vendors')->onDelete('cascade');
             $table->foreignId('category_id')->nullable()->constrained('product_categories')->onDelete('set null');
-            $table->string('name');
-            $table->text('description')->nullable();
-            $table->decimal('price', 12, 2);
+            $table->string('name'); // e.g., "Leather Jacket"
+            $table->text('description');
+            $table->decimal('price', 10, 2);
+            $table->enum('condition', ['new', 'old']); // Old and new
             $table->integer('stock')->default(0);
             $table->string('image')->nullable();
             $table->timestamps();
         });
-
     }
 
     /**

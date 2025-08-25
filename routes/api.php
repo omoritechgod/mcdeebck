@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Vendor\ProductVendorController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\SubscriptionController;
 use App\Http\Controllers\VerificationController;
@@ -157,8 +158,8 @@ Route::post('/log-error', [ErrorLogController::class, 'store']);
 
 Route::get('/test-api', fn () => 'API working');
 
-Route::get('/products', [ProductController::class, 'index']);
-Route::get('/products/{id}', [ProductController::class, 'show']);
+Route::get('/products', [ProductVendorController::class, 'index']);
+Route::get('/products/{id}', [ProductVendorController::class, 'show']);
 
 
 Route::middleware('auth:sanctum')->prefix('user')->group(function () {
@@ -168,9 +169,9 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
 
 Route::middleware(['auth:sanctum'])->group(function () {
     // Products (vendor only)
-    Route::post('/products', [ProductController::class, 'store']);
-    Route::put('/products/{id}', [ProductController::class, 'update']);
-    Route::delete('/products/{id}', [ProductController::class, 'destroy']);
+    Route::post('/products', [ProductVendorController::class, 'store']);
+    Route::put('/products/{id}', [ProductVendorController::class, 'update']);
+    Route::delete('/products/{id}', [ProductVendorController::class, 'destroy']);
 
     // Orders
     Route::post('/orders', [OrderController::class, 'store']);

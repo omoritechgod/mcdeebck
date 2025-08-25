@@ -39,7 +39,7 @@ use Illuminate\Database\Eloquent\Model;
 class Product extends Model
 {
     protected $fillable = [
-        'vendor_id', 'category_id', 'name', 'description', 'price', 'stock', 'image'
+        'vendor_id', 'category_id', 'name', 'description', 'price', 'stock', 'image', 'condition'
     ];
 
     public function vendor()
@@ -52,6 +52,15 @@ class Product extends Model
         return $this->belongsTo(ProductCategory::class, 'category_id');
     }
 
+    public function colors()
+    {
+        return $this->hasMany(ProductColor::class);
+    }
+
+    public function images()
+    {
+        return $this->hasMany(ProductImage::class);
+    }
     public function reviews()
     {
         return $this->hasMany(ProductReview::class);

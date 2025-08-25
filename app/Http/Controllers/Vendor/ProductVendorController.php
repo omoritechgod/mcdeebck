@@ -3,9 +3,15 @@
 namespace App\Http\Controllers\Vendor;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ProductUpdateRequest;
+use App\Http\Requests\ProductValidationRequest;
+use App\Http\Resources\ProductResource;
+use App\Models\ProductColor;
+use App\Models\ProductImage;
 use Illuminate\Http\Request;
-use App\Models\ProductVendor;
+use App\Models\Product;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\File;
 
 /**
  * @group Vendor - Product Vendor
@@ -14,79 +20,178 @@ use Illuminate\Support\Facades\Auth;
  */
 class ProductVendorController extends Controller
 {
-    /**
-     * Complete Product Vendor Setup
-     *
-     * @OA\Post(
-     *     path="/api/vendor/product-vendor/setup",
-     *     summary="Complete product vendor setup",
-     *     tags={"Vendor - Product Vendor"},
-     *     security={{"sanctum":{}}},
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             required={"contact_person", "store_address", "store_phone"},
-     *             @OA\Property(property="contact_person", type="string", example="John Doe"),
-     *             @OA\Property(property="store_address", type="string", example="123 Main Street, Ikeja"),
-     *             @OA\Property(property="store_phone", type="string", example="08012345678"),
-     *             @OA\Property(property="store_email", type="string", format="email", example="store@example.com"),
-     *             @OA\Property(property="store_description", type="string", example="We sell school bags and lunch boxes"),
-     *             @OA\Property(property="logo", type="string", example="https://example.com/logo.png")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=201,
-     *         description="Product vendor setup complete",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="message", type="string", example="Product vendor setup complete"),
-     *             @OA\Property(property="data", type="object",
-     *                 @OA\Property(property="id", type="integer", example=1),
-     *                 @OA\Property(property="vendor_id", type="integer", example=5),
-     *                 @OA\Property(property="contact_person", type="string", example="John Doe"),
-     *                 @OA\Property(property="store_address", type="string", example="123 Main Street, Ikeja"),
-     *                 @OA\Property(property="store_phone", type="string", example="08012345678"),
-     *                 @OA\Property(property="store_email", type="string", example="store@example.com"),
-     *                 @OA\Property(property="store_description", type="string", example="We sell school bags and lunch boxes"),
-     *                 @OA\Property(property="logo", type="string", example="https://example.com/logo.png")
-     *             )
-     *         )
-     *     )
-     * )
-     */
-    public function store(Request $request)
-    {
-        $request->validate([
-            'contact_person'    => 'required|string',
-            'store_address'     => 'required|string',
-            'store_phone'       => 'required|string',
-            'store_email'       => 'nullable|email',
-            'store_description' => 'nullable|string',
-            'logo'              => 'nullable|string', // or change to 'image' if handling file uploads
-        ]);
 
-        $vendor = Auth::user()->vendor;
+    public function index()
+    {
+        $products = Product::with(['vendor', 'category', 'reviews'])->latest()->get();
+
+        if ($products->isEmpty()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'No products found'
+            ], 200);
+        }
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Products retrieved successfully',
+            'products' => ProductResource::collection($products),
+        ], 200);
+    }
+
+    public function store(ProductValidationRequest $request)
+    {
+        $vendor = Auth::user();
 
         if (!$vendor || $vendor->category !== 'product_vendor') {
             return response()->json(['error' => 'Unauthorized or invalid vendor category'], 403);
         }
 
-        $productVendor = ProductVendor::updateOrCreate(
-            ['vendor_id' => $vendor->id],
-            $request->only([
-                'contact_person',
-                'store_address',
-                'store_phone',
-                'store_email',
-                'store_description',
-                'logo',
-            ])
-        );
+        $product = new Product();
 
-        $vendor->update(['is_setup_complete' => true]);
+        if ($request->hasFile('image')) {
+            $image = $request->file('image');
+            $fileName = $image->store('', 'public');
+            $filePath = 'uploads/' . $fileName;
+            $product->image = $filePath;
+        }
+        $product->name = $request->name;
+        $product->description = $request->description;
+        $product->price = $request->price;
+        $product->condition = $request->condition;
+        $product->status = $request->status ?? 'active';
+
+        $product->product_category_id = $request->product_category_id;
+        $product->vendor_id = $vendor->id;
+        $product->vendor_category_id = $vendor->vendor_category_id;
+        $product->save();
+
+        if ($request->has('color') && $request->filled('color')) {
+            foreach ($request->color as $color) {
+                ProductColor::create([
+                    'color' => $color,
+                    'product_id' => $product->id
+                ]);
+            }
+        }
+        // Save additional images
+        if ($request->hasFile('images')) {
+            foreach ($request->images as $image) {
+                $fileName = $image->store('', 'public');
+                $filePath = 'uploads/products/' . $fileName;
+                ProductImage::create([
+                    'image_path' => $filePath,
+                    'product_id' => $product->id
+                ]);
+            }
+        }
+    }
+
+    public function show(string $id)
+    {
+
+        $products = Product::with('vendor', 'category', 'reviews')->findOrFail($id);
+        if ($products->isEmpty()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Product not found',
+            ], 404);
+        }
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Product retrieved successfully',
+            'product' => $products,
+        ], 200);
+    }
+
+    public function update(ProductUpdateRequest $request, string $id)
+    {
+        $vendor = Auth::user();
+        if (!$vendor || $vendor->category !== 'product_vendor') {
+            return response()->json(['error' => 'Unauthorized or invalid vendor category'], 403);
+        }
+
+        $product = Product::findOrFail($id);
+
+
+        if ($request->hasFile('image')) {
+            File::delete(public_path('storage/' . $product->image));
+            $image = $request->file('image');
+            $fileName = $image->store('', 'public');
+            $filePath = 'uploads/' . $fileName;
+
+            $product->image = $filePath;
+        };
+
+        $product->name = $request->name;
+        $product->description = $request->description;
+        $product->price = $request->price;
+        $product->product_category_id = $request->product_category_id;
+        $product->condition = $request->condition;
+        $product->status = $request->status ?? 'active';
+        $product->vendor_id = $request->vendor_id;
+
+        if ($request->has('color')  && $request->filled('color')) {
+            foreach ($product->color as $color) {
+                $color->delete();
+            }
+            foreach ($product->color as $color) {
+                ProductColor::create([
+                    'color' => $color,
+                    'product_id' => $product->id
+                ]);
+            }
+        }
+
+        if ($request->hasFile('images')) {
+            foreach ($product->images as $image) {
+                File::delete(public_path($image->path));
+            }
+            $product->images()->delete();
+
+            foreach ($request->images as $image) {
+                $fileName = $image->store('', 'public');
+                $filePath = "uploads/" . $fileName;
+                ProductImage::create([
+                    'product_id' => $product->id,
+                    'Image_path' => $filePath,
+                ]);
+            }
+        }
 
         return response()->json([
-            'message' => 'Product vendor setup complete',
-            'data'    => $productVendor
-        ], 201);
+            'status' => 'Ok',
+            'message' => 'Product Updated Successfully'
+        ], 200);
+    }
+
+    public function destroy(string $id)
+    {
+        $vendor = Auth::user();
+        if (!$vendor || $vendor->category !== 'product_vendor') {
+            return response()->json(['error' => 'Unauthorized or invalid vendor category'], 403);
+        }
+
+        $product = Product::findOrFail($id);
+
+        if ($product->isEmpty()) {
+            return response()->json(['message' => 'Product Not Found']);
+        }
+        $product->colors()->delete();
+
+        if ($product->image && file_exists(public_path('storage/' . $product->image))) {
+            File::delete(public_path('storage/' . $product->image));
+        }
+        foreach ($product->images as $image) {
+            if ($image->image_path && file_exists(public_path('storage/' . $image->image_path))) {
+                File::delete(public_path('storage/' . $image->image_path));
+            }
+        }
+        $product->images()->delete();
+        $product->delete();
+
+        return response()->json([
+            'status' => 'Ok',
+            'message' => 'Product Deleted'
+        ], 200);
     }
 }
