@@ -10,6 +10,7 @@ use App\Models\ProductColor;
 use App\Models\ProductImage;
 use Illuminate\Http\Request;
 use App\Models\Product;
+use App\Models\Vendor;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
 
@@ -40,11 +41,13 @@ class ProductVendorController extends Controller
 
     public function store(ProductValidationRequest $request)
     {
-        $vendor = Auth::user();
+        $vendor = Vendor::where('user_id', Auth::id())->first();
 
-        if (!$vendor || $vendor->category !== 'product_vendor') {
+        if (!$vendor || trim(strtolower($vendor->category)) !== 'product_vendor') {
             return response()->json(['error' => 'Unauthorized or invalid vendor category'], 403);
         }
+
+
 
         $product = new Product();
 
@@ -105,8 +108,9 @@ class ProductVendorController extends Controller
 
     public function update(ProductUpdateRequest $request, string $id)
     {
-        $vendor = Auth::user();
-        if (!$vendor || $vendor->category !== 'product_vendor') {
+        $vendor = Vendor::where('user_id', Auth::id())->first();
+
+        if (!$vendor || trim(strtolower($vendor->category)) !== 'product_vendor') {
             return response()->json(['error' => 'Unauthorized or invalid vendor category'], 403);
         }
 
@@ -156,8 +160,9 @@ class ProductVendorController extends Controller
 
     public function destroy(string $id)
     {
-        $vendor = Auth::user();
-        if (!$vendor || $vendor->category !== 'product_vendor') {
+        $vendor = Vendor::where('user_id', Auth::id())->first();
+
+        if (!$vendor || trim(strtolower($vendor->category)) !== 'product_vendor') {
             return response()->json(['error' => 'Unauthorized or invalid vendor category'], 403);
         }
 
@@ -168,7 +173,7 @@ class ProductVendorController extends Controller
         }
         $product->colors()->delete();
         $product->image()->delete();
-        
+
         // multiple images
         $product->images()->delete();
         $product->delete();
