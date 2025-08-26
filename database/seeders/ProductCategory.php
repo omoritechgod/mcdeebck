@@ -19,7 +19,7 @@ class ProductCategory extends Seeder
             \App\Models\ProductCategory::firstOrCreate(
                 [
                     'name' => $cate,
-                    'parent_id' => null, // Assuming these are top-level categories
+                    'parent_id' => null, 
                 ],
             );
         }

@@ -60,9 +60,8 @@ class ProductVendorController extends Controller
             $product->image = $request->image;
         }
 
-        $product->product_category_id = $request->product_category_id;
+        $product->category_id = $request->category_id;
         $product->vendor_id = $vendor->id;
-        $product->vendor_category_id = $vendor->vendor_category_id;
         $product->save();
 
         if ($request->has('color') && $request->filled('color')) {
@@ -119,14 +118,14 @@ class ProductVendorController extends Controller
         $product->name = $request->name;
         $product->description = $request->description;
         $product->price = $request->price;
-        $product->product_category_id = $request->product_category_id;
         $product->condition = $request->condition;
+        $product->product_category_id = $request->product_category_id;
+       
 
         if ($request->filled('image')) {
             $product->image = $request->image;
         }
 
-        $product->status = $request->status ?? 'active';
         $product->vendor_id = $request->vendor_id;
 
         if ($request->has('color')  && $request->filled('color')) {

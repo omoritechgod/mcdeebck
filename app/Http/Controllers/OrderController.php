@@ -36,6 +36,7 @@ class OrderController extends Controller
      */
     public function store(Request $request)
     {
+
         $request->validate([
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
@@ -74,7 +75,7 @@ class OrderController extends Controller
                 $product->decrement('stock', $item['quantity']);
             }
 
-            return $order; // return order from transaction
+            return $order;
         });
 
         return response()->json([
@@ -96,10 +97,21 @@ class OrderController extends Controller
     {
         $orders = Order::where('user_id', Auth::id())
             ->with('items.product')
-            ->latest()->get();
+            ->latest()
+            ->get();
 
-        return response()->json($orders);
+        if ($orders->isEmpty()) {
+            return response()->json([
+                'message' => 'No orders found',
+            ], 404);
+        }
+
+        return response()->json([
+            'message' => 'Orders retrieved successfully',
+            'orders' => $orders
+        ]);
     }
+
 
     /**
      * @OA\Get(
@@ -112,14 +124,34 @@ class OrderController extends Controller
      */
     public function vendorOrders()
     {
-        $vendorId = Auth::user()->vendor->id;
+        $user = Auth::user();
+
+        // Check if user is authenticated and has a vendor profile
+        if (!$user || !$user->vendor) {
+            return response()->json(['message' => 'Unauthorized or vendor profile not found'], 403);
+        }
+
+        $vendorId = $user->vendor->id;
 
         $orders = Order::whereHas('items.product', function ($query) use ($vendorId) {
             $query->where('vendor_id', $vendorId);
-        })->with('items.product')->latest()->get();
+        })
+            ->with(['items.product' => function ($query) use ($vendorId) {
+                $query->where('vendor_id', $vendorId);
+            }])
+            ->latest()
+            ->get();
 
-        return response()->json($orders);
+        if ($orders->isEmpty()) {
+            return response()->json(['message' => 'No orders found'], 404);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'orders' => $orders
+        ]);
     }
+
 
     /**
      * @OA\Put(
@@ -147,10 +179,24 @@ class OrderController extends Controller
             'status' => 'required|in:processing,completed,cancelled',
         ]);
 
-        $order = Order::findOrFail($id);
+        $user = Auth::user();
+
+        if (!$user || !$user->vendor) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $vendorId = $user->vendor->id;
+
+        $order = Order::whereHas('items.product', function ($query) use ($vendorId) {
+            $query->where('vendor_id', $vendorId);
+        })->findOrFail($id);
+
         $order->status = $request->status;
         $order->save();
 
-        return response()->json(['message' => 'Order status updated']);
+        return response()->json([
+            'message' => 'Order status updated successfully',
+            'order'   => $order
+        ]);
     }
 }

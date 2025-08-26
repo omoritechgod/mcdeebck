@@ -29,7 +29,7 @@ class ProductValidationRequest extends FormRequest
 
             'description' => 'required|string',
             'price' => 'required|numeric',
-            'product_category_id' => 'required|exists:product_categories,id',
+            'category_id' => 'required|exists:product_categories,id',
             'condition' => ['nullable', Rule::in(['new', 'old'])],
             'stock' => 'required|integer|min:1',
             'image' => 'required|url',

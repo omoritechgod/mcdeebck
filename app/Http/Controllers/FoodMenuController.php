@@ -21,6 +21,10 @@ class FoodMenuController extends Controller
      */
     public function index()
     {
+        if(FoodMenu::count()=== 0){
+            return response()->json(['message' => 'No food menus found'], 404);
+        }
+
         return response()->json(FoodMenu::all());
     }
 

@@ -18,8 +18,7 @@ return new class extends Migration
             $table->string('name'); // e.g., "Leather Jacket"
             $table->text('description');
             $table->decimal('price', 10, 2);
-            $table->enum('condition', ['new', 'old']); // Old and new
-            $table->integer('stock')->default(0);
+            $table->integer('stock')->default(1);
             $table->string('image')->nullable();
             $table->timestamps();
         });

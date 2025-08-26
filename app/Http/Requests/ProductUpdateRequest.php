@@ -30,14 +30,14 @@ class ProductUpdateRequest extends FormRequest
             'description' => 'required|string',
             'price' => 'required|numeric',
             'stock' => 'required|integer|min:1',
-            'product_category_id' => 'required|exists:product_categories,id',
+            'category_id' => 'required|exists:product_categories,id',
 
             'condition' => ['required', Rule::in(['old', 'new'])],
 
             'image' => 'required|url',
 
             'images' => 'nullable|array',
-            'images.*' => 'nullable|url',,
+            'images.*' => 'nullable|url',
         ];
     }
 }
