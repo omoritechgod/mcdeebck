@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\FoodMenu;
 use App\Models\FoodOrder;
 use App\Models\FoodOrderItem;
+use App\Models\Vendor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -38,6 +39,11 @@ class FoodOrderController extends Controller
      */
     public function store(Request $request)
     {
+        $vendor = Vendor::where('user_id', Auth::id())->first();
+
+        if (!$vendor || trim(strtolower($vendor->category)) !== 'food_vendor') {
+            return response()->json(['error' => 'Unauthorized or invalid vendor category'], 403);
+        }
         $request->validate([
             'vendor_id' => 'required|integer|exists:vendors,id',
             'items' => 'required|array|min:1',
@@ -68,7 +74,12 @@ class FoodOrderController extends Controller
             ]);
         }
 
-        return response()->json(['message' => 'Order placed', 'order_id' => $order->id], 201);
+        return response()->json(
+            [
+                'message' => 'Order placed',
+                'order_id' => $order->id,
+                'price' => $total
+            ],201);
     }
 
     /**
@@ -82,6 +93,11 @@ class FoodOrderController extends Controller
      */
     public function index()
     {
+        $vendor = Vendor::where('user_id', Auth::id())->first();
+
+        if (!$vendor || trim(strtolower($vendor->category)) !== 'food_vendor') {
+            return response()->json(['error' => 'Unauthorized or invalid vendor category'], 403);
+        }
         $orders = FoodOrder::with('items')->where('user_id', Auth::id())->get();
         return response()->json($orders);
     }
@@ -105,6 +121,11 @@ class FoodOrderController extends Controller
      */
     public function updateStatus(Request $request, $id)
     {
+        $vendor = Vendor::where('user_id', Auth::id())->first();
+
+        if (!$vendor || trim(strtolower($vendor->category)) !== 'food_vendor') {
+            return response()->json(['error' => 'Unauthorized or invalid vendor category'], 403);
+        }
         $request->validate([
             'status' => 'required|in:pending,preparing,delivered,cancelled',
         ]);

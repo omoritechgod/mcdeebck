@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\FoodMenu;
 use Illuminate\Http\Request;
+use App\Models\Vendor;
 use Illuminate\Support\Facades\Auth;
 
 /**
@@ -21,7 +22,7 @@ class FoodMenuController extends Controller
      */
     public function index()
     {
-        if(FoodMenu::count()=== 0){
+        if (FoodMenu::count() === 0) {
             return response()->json(['message' => 'No food menus found'], 404);
         }
 
@@ -49,12 +50,18 @@ class FoodMenuController extends Controller
      */
     public function store(Request $request)
     {
+        $vendor = Vendor::where('user_id', Auth::id())->first();
+
+        if (!$vendor || trim(strtolower($vendor->category)) !== 'food_vendor') {
+            return response()->json(['error' => 'Unauthorized or invalid vendor category'], 403);
+        }
         $request->validate([
             'name' => 'required|string',
             'price' => 'required|numeric',
             'description' => 'nullable|string',
-            'image' => 'nullable|string',
+            'image' => 'required|url',
         ]);
+
 
         $menu = FoodMenu::create([
             'vendor_id' => Auth::user()->vendor->id,

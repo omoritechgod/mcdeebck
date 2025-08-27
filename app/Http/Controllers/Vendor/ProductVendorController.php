@@ -55,6 +55,7 @@ class ProductVendorController extends Controller
         $product->name = $request->name;
         $product->description = $request->description;
         $product->price = $request->price;
+        $product->stock = $request->stock;
         $product->condition = $request->condition;
         if ($request->filled('image')) {
             $product->image = $request->image;
@@ -118,6 +119,7 @@ class ProductVendorController extends Controller
         $product->name = $request->name;
         $product->description = $request->description;
         $product->price = $request->price;
+        $product->stock = $request->stock;
         $product->condition = $request->condition;
         $product->product_category_id = $request->product_category_id;
        
@@ -167,14 +169,9 @@ class ProductVendorController extends Controller
 
         $product = Product::findOrFail($id);
 
-        if ($product->isEmpty()) {
+        if (!$product) {
             return response()->json(['message' => 'Product Not Found']);
         }
-        $product->colors()->delete();
-        $product->image()->delete();
-
-        // multiple images
-        $product->images()->delete();
         $product->delete();
 
         return response()->json([
