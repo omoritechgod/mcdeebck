@@ -145,7 +145,7 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 
-    
+
 Route::middleware('auth:sanctum')->group(function () {
 
     // Route::post('/verify/send-otp', [SendOtpController::class, 'sendEmailOtp']);
@@ -156,7 +156,7 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::post('/log-error', [ErrorLogController::class, 'store']);
 
 
-Route::get('/test-api', fn () => 'API working');
+Route::get('/test-api', fn() => 'API working');
 
 Route::get('/products', [ProductVendorController::class, 'index']);
 Route::get('/products/{id}', [ProductVendorController::class, 'show']);
@@ -178,7 +178,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/orders', [OrderController::class, 'userOrders']);
     Route::get('/orders/vendor', [OrderController::class, 'vendorOrders']);
     Route::put('/orders/{id}/status', [OrderController::class, 'updateStatus']);
-    
+
     // Product Review
     Route::post('/products/{id}/review', [ProductReviewController::class, 'store']);
 });
@@ -214,22 +214,27 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/food/orders/{id}/status', [FoodOrderController::class, 'updateStatus']);
 });
 
+//ride settings
+Route::get('/ride-settings/base-fare', [RideSettingController::class, 'getBaseFare']);
+
+
 // Ride
-Route::post('/ride/request', [RideController::class, 'requestRide']);
-Route::put('/ride/update-status', [RideController::class, 'updateStatus']);
-Route::get('/ride/history', [RideController::class, 'history']);
-Route::post('/ride/online', [RideController::class, 'goOnline']);
-Route::post('/ride/offline', [RideController::class, 'goOffline']);
 Route::post('/ride/rate', [RideController::class, 'rate']);
+Route::group(['middleware' => 'auth:sanctum'], function () {
+    Route::post('/ride/online', [RideController::class, 'goOnline']);
+    Route::post('/ride/request', [RideController::class, 'requestRide']);
+    Route::put('/ride/update-status', [RideController::class, 'updateStatus']);
+    Route::get('/ride/history', [RideController::class, 'history']);
+    Route::post('/ride/offline', [RideController::class, 'goOffline']);
+});
 
 // Ping
-Route::get('/ping', fn () => response()->json(['message' => 'pong']));
+Route::get('/ping', fn() => response()->json(['message' => 'pong']));
 
 
 Route::middleware('auth:sanctum')->group(function () {
-Route::post('/apartment/bookings', [BookingController::class, 'store']);
-Route::get('/apartment/bookings', [BookingController::class, 'index']);
-
+    Route::post('/apartment/bookings', [BookingController::class, 'store']);
+    Route::get('/apartment/bookings', [BookingController::class, 'index']);
 });
 
 // Maintenance
@@ -238,10 +243,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/maintenance/my-requests', [MaintenanceController::class, 'myRequests']);
     Route::put('/maintenance/update-status', [MaintenanceController::class, 'updateStatus']);
 });
-
-// Ride Settings
-Route::get('/ride/settings', [RideSettingController::class, 'index']);
-Route::middleware('auth:sanctum')->put('/ride/settings', [RideSettingController::class, 'update']);
 
 
 Route::post('/subscribe', [SubscriptionController::class, 'subscribe']);

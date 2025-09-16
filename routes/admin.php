@@ -1,4 +1,5 @@
 <?php
+use App\Http\Controllers\RideSettingController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AuthController;
@@ -8,6 +9,7 @@ use App\Http\Controllers\Admin\AdminVendorController;
 use App\Http\Controllers\Admin\AdminKYCVerificationController;
 
 use App\Http\Controllers\Admin\AdminBookingController;
+use App\Models\RideSetting;
 
 // Route::middleware(['auth:admin'])->group(function () {
 
@@ -24,6 +26,8 @@ Route::middleware('auth:admin')->prefix('admin')->group(function () {
     Route::get('/bookings/apartments', [AdminBookingController::class, 'apartmentBookings']); // apartment only
     Route::get('/bookings/{id}', [AdminBookingController::class, 'show']);
     Route::put('/bookings/{id}/status', [AdminBookingController::class, 'updateStatus']);
+
+    Route::post('/ride-settings/update', [RideSettingController::class, 'update']);
 });
 
 
