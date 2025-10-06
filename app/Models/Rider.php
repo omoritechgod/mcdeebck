@@ -45,10 +45,7 @@ class Rider extends Model
         'status',          // e.g., 'active', 'pending', 'suspended'
         'vehicle_type',    // e.g., bike, tricycle, car
         'license_number',
-        'experience_years',
-        'availability',
-        'current_lat',
-        'current_lng'
+        'experience_years'
     ];
 
     // Relationships
@@ -67,9 +64,5 @@ class Rider extends Model
     public function vendor()
     {
         return $this->belongsTo(Vendor::class);
-    }
-
-    public function rides(){
-        return $this->hasMany(Ride::class, 'rider_id', 'id');
     }
 }

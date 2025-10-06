@@ -2,102 +2,81 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Cart;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use App\Models\Cart;
+use App\Models\Product;
 
-/**
- * @OA\Tag(
- *     name="Cart",
- *     description="Cart endpoints"
- * )
- */
 class CartController extends Controller
 {
     /**
-     * @OA\Get(
-     *     path="/api/cart",
-     *     summary="Get current user's cart",
-     *     tags={"Cart"},
-     *     security={{"sanctum":{}}},
-     *     @OA\Response(response=200, description="Cart retrieved successfully")
-     * )
+     * Display the user's cart.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $cartItems = Cart::where('user_id', Auth::id())->get();
+        $cartItems = Cart::where('user_id', $request->user()->id)
+            ->with('product.category')
+            ->get();
+
         return response()->json($cartItems);
     }
 
     /**
-     * @OA\Post(
-     *     path="/api/cart/add",
-     *     summary="Add item to cart",
-     *     tags={"Cart"},
-     *     security={{"sanctum":{}}},
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             required={"item_type", "item_id", "quantity"},
-     *             @OA\Property(property="item_type", type="string", example="product"),
-     *             @OA\Property(property="item_id", type="integer"),
-     *             @OA\Property(property="quantity", type="integer", minimum=1)
-     *         )
-     *     ),
-     *     @OA\Response(response=200, description="Item added to cart")
-     * )
+     * Add product to cart or update quantity if already exists.
+     * Expects JSON:
+     * {
+     *   "product_id": 12,
+     *   "quantity": 2
+     * }
      */
-    public function store(Request $request)
+    public function add(Request $request)
     {
-        $request->validate([
-            'item_type' => 'required|string',
-            'item_id' => 'required|integer',
+        $validated = $request->validate([
+            'product_id' => 'required|exists:products,id',
             'quantity' => 'required|integer|min:1',
         ]);
 
-        $cart = Cart::updateOrCreate(
-            [
-                'user_id' => Auth::id(),
-                'item_type' => $request->item_type,
-                'item_id' => $request->item_id,
-            ],
-            ['quantity' => $request->quantity]
-        );
+        $userId = $request->user()->id;
+        $product = Product::findOrFail($validated['product_id']);
 
-        return response()->json(['message' => 'Item added to cart', 'cart' => $cart]);
+        // Check stock
+        if ($validated['quantity'] > $product->stock_quantity) {
+            return response()->json([
+                'message' => "Insufficient stock for {$product->title}"
+            ], 422);
+        }
+
+        // Check if item already exists in cart
+        $cartItem = Cart::where('user_id', $userId)
+            ->where('product_id', $validated['product_id'])
+            ->first();
+
+        if ($cartItem) {
+            // Update quantity
+            $cartItem->quantity = $validated['quantity'];
+            $cartItem->save();
+        } else {
+            // Create new cart entry
+            $cartItem = Cart::create([
+                'user_id' => $userId,
+                'product_id' => $validated['product_id'],
+                'quantity' => $validated['quantity'],
+            ]);
+        }
+
+        return response()->json($cartItem->load('product.category'), 201);
     }
 
     /**
-     * @OA\Delete(
-     *     path="/api/cart/remove/{item_id}",
-     *     summary="Remove item from cart",
-     *     tags={"Cart"},
-     *     security={{"sanctum":{}}},
-     *     @OA\Parameter(name="item_id", in="path", required=true, @OA\Schema(type="integer")),
-     *     @OA\Response(response=200, description="Item removed from cart")
-     * )
+     * Remove an item from the cart.
      */
-    public function destroy($itemId)
+    public function destroy(Request $request, Cart $cart)
     {
-        $deleted = Cart::where('user_id', Auth::id())
-            ->where('item_id', $itemId)
-            ->delete();
+        if ($cart->user_id !== $request->user()->id) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $cart->delete();
 
         return response()->json(['message' => 'Item removed from cart']);
-    }
-
-    /**
-     * @OA\Delete(
-     *     path="/api/cart/clear",
-     *     summary="Clear entire cart",
-     *     tags={"Cart"},
-     *     security={{"sanctum":{}}},
-     *     @OA\Response(response=200, description="Cart cleared")
-     * )
-     */
-    public function clear()
-    {
-        Cart::where('user_id', Auth::id())->delete();
-        return response()->json(['message' => 'Cart cleared']);
     }
 }

@@ -142,6 +142,20 @@ class ServiceOrderController extends Controller
 
         return response()->json($response->json());
     }
+    /**
+
+    * User: list own service orders
+    */
+    public function myOrders()
+    {
+        $orders = ServiceOrder::with(['serviceVendor', 'serviceVendor.vendor', 'servicePricing'])
+            ->where('user_id', Auth::id())
+            ->orderBy('id', 'desc')
+            ->get();
+
+        return response()->json(['data' => $orders]);
+    }
+
 
     /**
      * Step 6: User marks service as completed -> vendor gets paid.

@@ -62,10 +62,9 @@ class Ride extends Model
 
     public function rider()
     {
-        return $this->belongsTo(Rider::class, 'rider_id', 'id');
+        return $this->belongsTo(User::class, 'rider_id');
     }
 
-   
     public function gpsLogs()
     {
         return $this->hasMany(GpsLog::class);

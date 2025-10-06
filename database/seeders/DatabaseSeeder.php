@@ -16,9 +16,9 @@ class DatabaseSeeder extends Seeder
         // User::factory(10)->create();
     
         {
-            $this->call(AdminWalletSeeder::class);
-            $this->call(ProductCategory::class);
+            $this->call(CategorySeeder::class);
         }
+     
 
 
         // User::factory()->create([

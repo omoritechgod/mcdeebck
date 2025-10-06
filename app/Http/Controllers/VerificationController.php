@@ -54,9 +54,9 @@ class VerificationController extends Controller
 
         Verification::create([
             'user_id' => $user->id,
-            'type' => $request->type,
-            'value' => '',
-            'status' => 'pending',
+            'type'    => $request->type,
+            'value'   => '', // will be updated later
+            'status'  => 'pending',
         ]);
 
         return response()->json(['message' => 'Verification initiated']);
@@ -100,7 +100,7 @@ class VerificationController extends Controller
             ->where('status', 'pending')
             ->first();
 
-        if (! $verification) {
+        if (!$verification) {
             return response()->json(['message' => 'No verification in progress'], 404);
         }
 
@@ -131,17 +131,16 @@ class VerificationController extends Controller
     public function status()
     {
         $user = Auth::user();
-
         $verification = Verification::where('user_id', $user->id)->first();
 
-        if (! $verification) {
+        if (!$verification) {
             return response()->json(['status' => 'none']);
         }
 
         return response()->json([
             'status' => $verification->status,
-            'type' => $verification->type,
-            'value' => $verification->value
+            'type'   => $verification->type,
+            'value'  => $verification->value, // still fine to keep NIN/CAC number
         ]);
     }
 }

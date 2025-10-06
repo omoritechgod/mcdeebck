@@ -3,200 +3,168 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use App\Models\Cart;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
-use Illuminate\Support\Facades\DB;
+use App\Models\Wallet;
+use App\Models\WalletTransaction;
+use App\Models\AdminWallet;
+use App\Models\AdminTransaction;
 
 class OrderController extends Controller
 {
     /**
-     * @OA\Post(
-     *     path="/api/orders",
-     *     tags={"Orders"},
-     *     summary="Place a new order",
-     *     security={{"sanctum":{}}},
-     *     @OA\RequestBody(
-     *         @OA\JsonContent(
-     *             required={"items"},
-     *             @OA\Property(
-     *                 property="items",
-     *                 type="array",
-     *                 @OA\Items(
-     *                     @OA\Property(property="product_id", type="integer"),
-     *                     @OA\Property(property="quantity", type="integer")
-     *                 )
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(response=200, description="Order placed successfully"),
-     *     @OA\Response(response=422, description="Validation error")
-     * )
+     * User's orders list
      */
-    public function store(Request $request)
+    public function index(Request $request)
     {
+        $orders = Order::where('user_id', $request->user()->id)
+            ->with(['items.product', 'vendor'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(20);
 
-        $request->validate([
-            'items' => 'required|array|min:1',
-            'items.*.product_id' => 'required|exists:products,id',
-            'items.*.quantity' => 'required|integer|min:1',
+        return response()->json($orders);
+    }
+
+    /**
+     * View one order
+     */
+    public function show(Request $request, Order $order)
+    {
+        if ($order->user_id !== $request->user()->id) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        return response()->json($order->load(['items.product', 'vendor']));
+    }
+
+    /**
+     * Checkout user cart → creates one order per vendor.
+     */
+    public function checkoutFromCart(Request $request)
+    {
+        $validated = $request->validate([
+            'delivery_address' => 'nullable|string|max:255',
+            'delivery_method'  => 'nullable|string|max:50',
         ]);
 
-        $order = DB::transaction(function () use ($request) {
-            $total = 0;
+        $user = $request->user();
+        $cartItems = Cart::where('user_id', $user->id)->with('product')->get();
 
-            foreach ($request->items as $item) {
-                $product = Product::findOrFail($item['product_id']);
+        if ($cartItems->isEmpty()) {
+            return response()->json(['message' => 'Cart is empty'], 422);
+        }
 
-                if ($product->stock < $item['quantity']) {
-                    throw new \Exception("Not enough stock for {$product->name}");
+        $grouped = $cartItems->groupBy(fn($item) => $item->product->vendor_id);
+
+        $orders = [];
+
+        DB::transaction(function () use ($grouped, $user, $validated, &$orders) {
+            foreach ($grouped as $vendorId => $items) {
+                $total = 0;
+                $orderItemsData = [];
+
+                foreach ($items as $cartItem) {
+                    $product = $cartItem->product;
+
+                    if ($cartItem->quantity > $product->stock_quantity) {
+                        throw new \Exception("Insufficient stock for product {$product->title}");
+                    }
+
+                    $price = $product->price;
+                    $total += $price * $cartItem->quantity;
+
+                    $orderItemsData[] = [
+                        'product_id' => $product->id,
+                        'quantity'   => $cartItem->quantity,
+                        'price'      => $price,
+                    ];
                 }
 
-                $total += $product->price * $item['quantity'];
-            }
-
-            $order = Order::create([
-                'user_id' => Auth::id(),
-                'total' => $total,
-                'status' => 'pending',
-            ]);
-
-            foreach ($request->items as $item) {
-                $product = Product::findOrFail($item['product_id']);
-
-                OrderItem::create([
-                    'order_id' => $order->id,
-                    'product_id' => $product->id,
-                    'quantity' => $item['quantity'],
-                    'price' => $product->price,
+                $order = Order::create([
+                    'user_id'          => $user->id,
+                    'vendor_id'        => $vendorId,
+                    'total_amount'     => $total,
+                    'status'           => 'pending_vendor',
+                    'delivery_address' => $validated['delivery_address'] ?? null,
+                    'delivery_method'  => $validated['delivery_method'] ?? null,
                 ]);
 
-                $product->decrement('stock', $item['quantity']);
+                foreach ($orderItemsData as $data) {
+                    $data['order_id'] = $order->id;
+                    OrderItem::create($data);
+                }
+
+                $orders[] = $order->load(['items.product', 'vendor']);
             }
 
-            return $order;
+            Cart::where('user_id', $user->id)->delete();
         });
 
         return response()->json([
-            'message' => 'Order placed',
-            'order'   => $order
-        ]);
+            'message' => 'Checkout complete. Orders created.',
+            'orders'  => $orders,
+        ], 201);
     }
 
     /**
-     * @OA\Get(
-     *     path="/api/orders",
-     *     tags={"Orders"},
-     *     summary="Get current user's orders",
-     *     security={{"sanctum":{}}},
-     *     @OA\Response(response=200, description="List of user's orders")
-     * )
+     * Mark order as completed → release escrow to vendor.
      */
-    public function userOrders()
+    public function markCompleted(Request $request, Order $order)
     {
-        $orders = Order::where('user_id', Auth::id())
-            ->with('items.product')
-            ->latest()
-            ->get();
+        $user = $request->user();
 
-        if ($orders->isEmpty()) {
-            return response()->json([
-                'message' => 'No orders found',
-            ], 404);
+        // Only the order owner or admin can complete
+        if ($order->user_id !== $user->id && !$user->is_admin) {
+            return response()->json(['message' => 'Forbidden'], 403);
         }
 
-        return response()->json([
-            'message' => 'Orders retrieved successfully',
-            'orders' => $orders
-        ]);
-    }
-
-
-    /**
-     * @OA\Get(
-     *     path="/api/orders/vendor",
-     *     tags={"Orders"},
-     *     summary="Get orders for vendor's products",
-     *     security={{"sanctum":{}}},
-     *     @OA\Response(response=200, description="List of vendor's orders")
-     * )
-     */
-    public function vendorOrders()
-    {
-        $user = Auth::user();
-
-        // Check if user is authenticated and has a vendor profile
-        if (!$user || !$user->vendor) {
-            return response()->json(['message' => 'Unauthorized or vendor profile not found'], 403);
+        if ($order->status !== 'shipped') {
+            return response()->json(['message' => 'Order not yet delivered'], 422);
         }
 
-        $vendorId = $user->vendor->id;
+        DB::transaction(function () use ($order) {
+            $order->status = 'completed';
+            $order->save();
 
-        $orders = Order::whereHas('items.product', function ($query) use ($vendorId) {
-            $query->where('vendor_id', $vendorId);
-        })
-            ->with(['items.product' => function ($query) use ($vendorId) {
-                $query->where('vendor_id', $vendorId);
-            }])
-            ->latest()
-            ->get();
+            $commissionRate = config('commissions.ecommerce', 5) / 100;
+            $companyCut = round($commissionRate * (float)$order->total_amount, 2);
+            $vendorShare = (float)$order->total_amount - $companyCut;
 
-        if ($orders->isEmpty()) {
-            return response()->json(['message' => 'No orders found'], 404);
-        }
+            // Admin commission
+            $adminWallet = AdminWallet::firstOrCreate(
+                ['name' => 'Main'],
+                ['balance' => 0.00, 'currency' => 'NGN']
+            );
+            $adminWallet->increment('balance', $companyCut);
 
-        return response()->json([
-            'status' => 'success',
-            'orders' => $orders
-        ]);
-    }
+            AdminTransaction::create([
+                'admin_wallet_id' => $adminWallet->id,
+                'type'            => 'credit',
+                'amount'          => $companyCut,
+                'ref'             => 'order_'.$order->id.'_commission',
+                'status'          => 'success',
+                'meta'            => ['entity' => 'ecommerce_order', 'entity_id' => $order->id],
+            ]);
 
+            // Vendor payout
+            $vendorWallet = Wallet::firstOrCreate(
+                ['user_id' => $order->vendor->user_id],
+                ['balance' => 0.00, 'currency' => 'NGN']
+            );
+            $vendorWallet->increment('balance', $vendorShare);
 
-    /**
-     * @OA\Put(
-     *     path="/api/orders/{id}/status",
-     *     tags={"Orders"},
-     *     summary="Update order status (e.g., processing, completed)",
-     *     security={{"sanctum":{}}},
-     *     @OA\Parameter(
-     *         name="id", in="path", required=true,
-     *         @OA\Schema(type="integer")
-     *     ),
-     *     @OA\RequestBody(
-     *         @OA\JsonContent(
-     *             required={"status"},
-     *             @OA\Property(property="status", type="string", enum={"processing", "completed", "cancelled"})
-     *         )
-     *     ),
-     *     @OA\Response(response=200, description="Status updated"),
-     *     @OA\Response(response=403, description="Unauthorized or not found")
-     * )
-     */
-    public function updateStatus(Request $request, $id)
-    {
-        $request->validate([
-            'status' => 'required|in:processing,completed,cancelled',
-        ]);
+            WalletTransaction::create([
+                'wallet_id' => $vendorWallet->id,
+                'type'     => 'credit',
+                'amount'   => $vendorShare,
+                'ref'      => 'order_'.$order->id.'_payout',
+                'status'   => 'success',
+            ]);
+        });
 
-        $user = Auth::user();
-
-        if (!$user || !$user->vendor) {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
-
-        $vendorId = $user->vendor->id;
-
-        $order = Order::whereHas('items.product', function ($query) use ($vendorId) {
-            $query->where('vendor_id', $vendorId);
-        })->findOrFail($id);
-
-        $order->status = $request->status;
-        $order->save();
-
-        return response()->json([
-            'message' => 'Order status updated successfully',
-            'order'   => $order
-        ]);
+        return response()->json(['message' => 'Order completed and funds released']);
     }
 }

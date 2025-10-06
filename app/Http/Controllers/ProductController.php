@@ -2,167 +2,158 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Product;
-use Illuminate\Support\Facades\Auth;
+use App\Models\Vendor;
+use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\DB;
 
-/**
- * @OA\Tag(
- *     name="Products",
- *     description="Product listing, viewing, creating, updating, and deleting"
- * )
- */
 class ProductController extends Controller
 {
     /**
-     * @OA\Get(
-     *     path="/api/products",
-     *     tags={"Products"},
-     *     summary="Get all products",
-     *     @OA\Response(response=200, description="List of products")
-     * )
+     * List products belonging to authenticated vendor.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $products = Product::with(['vendor', 'category', 'reviews'])->latest()->get();
+        $user = $request->user();
+        $vendor = $user->vendor ?? Vendor::where('user_id', $user->id)->first();
+
+        if (! $vendor) {
+            return response()->json(['message' => 'Vendor account not found.'], 404);
+        }
+
+        $query = Product::where('vendor_id', $vendor->id)
+                        ->with('category')
+                        ->orderBy('created_at', 'desc');
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $products = $query->paginate(20);
+
         return response()->json($products);
     }
 
     /**
-     * @OA\Get(
-     *     path="/api/products/{id}",
-     *     tags={"Products"},
-     *     summary="Get a single product by ID",
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         required=true,
-     *         description="ID of the product",
-     *         @OA\Schema(type="integer")
-     *     ),
-     *     @OA\Response(response=200, description="Product details"),
-     *     @OA\Response(response=404, description="Product not found")
-     * )
-     */
-    public function show($id)
-    {
-        $product = Product::with(['vendor', 'category', 'reviews'])->findOrFail($id);
-        return response()->json($product);
-    }
-
-    /**
-     * @OA\Post(
-     *     path="/api/products",
-     *     tags={"Products"},
-     *     summary="Create a product (vendor only)",
-     *     security={{"sanctum":{}}},
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             required={"name", "price", "stock"},
-     *             @OA\Property(property="name", type="string"),
-     *             @OA\Property(property="price", type="number", format="float"),
-     *             @OA\Property(property="stock", type="integer"),
-     *             @OA\Property(property="category_id", type="integer", nullable=true),
-     *             @OA\Property(property="description", type="string", nullable=true)
-     *         )
-     *     ),
-     *     @OA\Response(response=200, description="Product created"),
-     *     @OA\Response(response=401, description="Unauthorized")
-     * )
+     * Store new product for the vendor.
+     * Expects JSON with image URLs (Cloudinary links).
      */
     public function store(Request $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'price' => 'required|numeric|min:1',
-            'stock' => 'required|integer|min:0',
-            'category_id' => 'nullable|exists:product_categories,id',
+        $user = $request->user();
+        $vendor = $user->vendor ?? Vendor::where('user_id', $user->id)->first();
+
+        if (! $vendor) {
+            return response()->json(['message' => 'Vendor account not found.'], 404);
+        }
+
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'price' => 'required|numeric|min:0',
+            'stock_quantity' => 'required|integer|min:0',
+            'category_id' => ['nullable', 'exists:categories,id'],
+            'condition' => ['required', Rule::in(['new', 'used'])],
+            'allow_pickup' => 'sometimes|boolean',
+            'allow_shipping' => 'sometimes|boolean',
+            'images' => 'nullable|array',
+            'images.*' => 'url'
         ]);
 
-        $vendor = Auth::user()->vendor;
+        // determine status: make active only if vendor is live
+        $isLive = ($vendor->is_verified && $user->phone_verified_at);
+        $status = $isLive ? 'active' : 'draft';
 
         $product = Product::create([
             'vendor_id' => $vendor->id,
-            'name' => $request->name,
-            'price' => $request->price,
-            'stock' => $request->stock,
-            'category_id' => $request->category_id,
-            'description' => $request->description,
+            'title' => $validated['title'],
+            'description' => $validated['description'] ?? null,
+            'images' => $validated['images'] ?? [],
+            'price' => $validated['price'],
+            'stock_quantity' => $validated['stock_quantity'],
+            'category_id' => $validated['category_id'] ?? null,
+            'condition' => $validated['condition'],
+            'allow_pickup' => $request->boolean('allow_pickup'),
+            'allow_shipping' => $request->boolean('allow_shipping'),
+            'status' => $status,
         ]);
 
-        return response()->json(['message' => 'Product created', 'product' => $product]);
+        return response()->json($product->load('category'), 201);
     }
 
     /**
-     * @OA\Put(
-     *     path="/api/products/{id}",
-     *     tags={"Products"},
-     *     summary="Update a product (vendor only)",
-     *     security={{"sanctum":{}}},
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         required=true,
-     *         description="ID of the product",
-     *         @OA\Schema(type="integer")
-     *     ),
-     *     @OA\RequestBody(
-     *         @OA\JsonContent(
-     *             @OA\Property(property="name", type="string"),
-     *             @OA\Property(property="price", type="number", format="float"),
-     *             @OA\Property(property="stock", type="integer"),
-     *             @OA\Property(property="category_id", type="integer", nullable=true),
-     *             @OA\Property(property="description", type="string", nullable=true)
-     *         )
-     *     ),
-     *     @OA\Response(response=200, description="Product updated"),
-     *     @OA\Response(response=403, description="Unauthorized"),
-     *     @OA\Response(response=404, description="Product not found")
-     * )
+     * Show a specific product for the vendor.
      */
-    public function update(Request $request, $id)
+    public function show(Request $request, Product $product)
     {
-        $product = Product::findOrFail($id);
+        $user = $request->user();
+        $vendor = $user->vendor ?? Vendor::where('user_id', $user->id)->first();
 
-        if ($product->vendor_id !== Auth::user()->vendor->id) {
-            return response()->json(['error' => 'Unauthorized'], 403);
+        if (!$vendor || $product->vendor_id !== $vendor->id) {
+            return response()->json(['message' => 'Not found'], 404);
         }
 
-        $product->update($request->only(['name', 'price', 'stock', 'description', 'category_id']));
-
-        return response()->json(['message' => 'Product updated', 'product' => $product]);
+        return response()->json($product->load('category'));
     }
 
     /**
-     * @OA\Delete(
-     *     path="/api/products/{id}",
-     *     tags={"Products"},
-     *     summary="Delete a product (vendor only)",
-     *     security={{"sanctum":{}}},
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         required=true,
-     *         description="ID of the product",
-     *         @OA\Schema(type="integer")
-     *     ),
-     *     @OA\Response(response=200, description="Product deleted"),
-     *     @OA\Response(response=403, description="Unauthorized"),
-     *     @OA\Response(response=404, description="Product not found")
-     * )
+     * Update vendor's product.
+     * Expects JSON with image URLs.
      */
-    public function destroy($id)
+    public function update(Request $request, Product $product)
     {
-        $product = Product::findOrFail($id);
+        $user = $request->user();
+        $vendor = $user->vendor ?? Vendor::where('user_id', $user->id)->first();
 
-        if ($product->vendor_id !== Auth::user()->vendor->id) {
-            return response()->json(['error' => 'Unauthorized'], 403);
+        if (!$vendor || $product->vendor_id !== $vendor->id) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $validated = $request->validate([
+            'title' => 'sometimes|string|max:255',
+            'description' => 'nullable|string',
+            'price' => 'sometimes|numeric|min:0',
+            'stock_quantity' => 'sometimes|integer|min:0',
+            'category_id' => ['nullable', 'exists:categories,id'],
+            'condition' => [Rule::in(['new', 'used'])],
+            'allow_pickup' => 'sometimes|boolean',
+            'allow_shipping' => 'sometimes|boolean',
+            'images' => 'nullable|array',
+            'images.*' => 'url',
+        ]);
+
+        DB::transaction(function () use ($request, $product, $validated) {
+            $product->fill($validated);
+            $product->allow_pickup = $request->boolean('allow_pickup', $product->allow_pickup);
+            $product->allow_shipping = $request->boolean('allow_shipping', $product->allow_shipping);
+
+            // overwrite images if provided
+            if (isset($validated['images'])) {
+                $product->images = $validated['images'];
+            }
+
+            $product->save();
+        });
+
+        return response()->json($product->fresh()->load('category'));
+    }
+
+    /**
+     * Delete product.
+     */
+    public function destroy(Request $request, Product $product)
+    {
+        $user = $request->user();
+        $vendor = $user->vendor ?? Vendor::where('user_id', $user->id)->first();
+
+        if (!$vendor || $product->vendor_id !== $vendor->id) {
+            return response()->json(['message' => 'Forbidden'], 403);
         }
 
         $product->delete();
 
-        return response()->json(['message' => 'Product deleted']);
+        return response()->json(['message' => 'Product deleted.']);
     }
 }

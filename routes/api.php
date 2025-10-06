@@ -1,16 +1,13 @@
 <?php
 
-use App\Http\Controllers\Vendor\ProductVendorController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\SubscriptionController;
 use App\Http\Controllers\VerificationController;
 use App\Http\Controllers\WalletController;
 use App\Http\Controllers\ApartmentController;
 // use App\Http\Controllers\ApartmentBookingController;
-use App\Http\Controllers\ProductController;
-use App\Http\Controllers\OrderController;
+
 use App\Http\Controllers\ProductReviewController;
-use App\Http\Controllers\CartController;
 use App\Http\Controllers\Api\MaintenanceController;
 use App\Http\Controllers\FoodMenuController;
 use App\Http\Controllers\FoodOrderController;
@@ -38,6 +35,45 @@ use App\Http\Controllers\Webhook\FlutterwaveWebhookController;
 use App\Http\Controllers\Vendor\ServiceVendorController;
 use App\Http\Controllers\ServiceOrderController;
 use App\Http\Controllers\Vendor\ServicePricingController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\OrderController;
+use App\Http\Controllers\CartController;
+use App\Http\Controllers\Marketplace\ProductController as MarketplaceProductController;
+use App\Http\Controllers\VendorOrderController;
+
+
+
+Route::middleware('auth:sanctum')->prefix('vendor')->group(function () {
+    Route::get('orders', [VendorOrderController::class, 'index']);
+    Route::get('orders/{order}', [VendorOrderController::class, 'show']);
+    Route::post('orders/{order}/accept', [VendorOrderController::class, 'accept']);
+    Route::post('orders/{order}/reject', [VendorOrderController::class, 'reject']);
+});
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/cart', [CartController::class, 'index']);
+    Route::post('/cart/add', [CartController::class, 'add']);
+    Route::delete('/cart/{cart}', [CartController::class, 'destroy']);
+});
+
+
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('orders', [OrderController::class, 'index']);
+    Route::get('orders/{order}', [OrderController::class, 'show']);
+    Route::post('orders/checkout', [OrderController::class, 'checkoutFromCart']);
+    Route::post('orders/{order}/complete', [OrderController::class, 'markCompleted']);
+});
+
+
+
+
+Route::get('marketplace/products', [MarketplaceProductController::class, 'index']);
+
+Route::middleware('auth:sanctum')->prefix('vendor')->group(function () {
+    Route::apiResource('products', ProductController::class);
+});
+
 
 
 
@@ -64,6 +100,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Step 1: User creates a service order
     Route::post('/service-orders', [ServiceOrderController::class, 'store']);
 
+    // Step 1b: User views own orders
+    Route::get('/service-orders/my', [ServiceOrderController::class, 'myOrders']);
+
     // Step 2: Vendor views incoming requests
     Route::get('/vendor/service-orders', [ServiceOrderController::class, 'vendorRequests']);
 
@@ -74,8 +113,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/service-orders/{id}/pay', [ServiceOrderController::class, 'initiatePayment']);
 
     // Step 6: User marks service as completed (release vendor payment)
-    Route::post('/service-orders/{id}/complete', [ServiceOrderController::class, 'markCompleted']);
+    Route::post('/service-orders/{id}/completed', [ServiceOrderController::class, 'markCompleted']);
 });
+
 
 // Step 5: Webhook from Flutterwave (public route, signature verified inside controller)
 // Route::post('/flutterwave/webhook', [ServiceOrderController::class, 'flutterwaveWebhook']);
@@ -84,9 +124,17 @@ Route::middleware('auth:sanctum')->group(function () {
 // Payment initiation
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/bookings/{id}/pay', [PaymentController::class, 'payForBooking']);
+        // E-commerce order payments
+    Route::post('/orders/{id}/pay', [PaymentController::class, 'payForOrder']);
+    Route::post('/orders/{order}/release-escrow', [PaymentController::class, 'releaseEscrow']);
+    Route::post('/orders/{order}/refund', [PaymentController::class, 'refundOrder']);
 });
 
 Route::post('/flutterwave/webhook', [FlutterwaveWebhookController::class, 'handle']);
+
+// Manual trigger (frontend can call after redirect)
+Route::middleware('auth:sanctum')->post('/flutterwave/manual-trigger', [\App\Http\Controllers\Webhook\FlutterwaveWebhookController::class, 'manualTrigger']);
+
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/apartment/bookings', [BookingController::class, 'store']);
@@ -145,7 +193,7 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 
-
+    
 Route::middleware('auth:sanctum')->group(function () {
 
     // Route::post('/verify/send-otp', [SendOtpController::class, 'sendEmailOtp']);
@@ -156,10 +204,9 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::post('/log-error', [ErrorLogController::class, 'store']);
 
 
-Route::get('/test-api', fn() => 'API working');
+Route::get('/test-api', fn () => 'API working');
 
-Route::get('/products', [ProductVendorController::class, 'index']);
-Route::get('/products/{id}', [ProductVendorController::class, 'show']);
+
 
 
 Route::middleware('auth:sanctum')->prefix('user')->group(function () {
@@ -167,21 +214,7 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::put('/profile', [UserController::class, 'update']);
 });
 
-Route::middleware(['auth:sanctum'])->group(function () {
-    // Products (vendor only)
-    Route::post('/products', [ProductVendorController::class, 'store']);
-    Route::put('/products/{id}', [ProductVendorController::class, 'update']);
-    Route::delete('/products/{id}', [ProductVendorController::class, 'destroy']);
 
-    // Orders
-    Route::post('/orders', [OrderController::class, 'store']);
-    Route::get('/orders', [OrderController::class, 'userOrders']);
-    Route::get('/orders/vendor', [OrderController::class, 'vendorOrders']);
-    Route::put('/orders/{id}/status', [OrderController::class, 'updateStatus']);
-
-    // Product Review
-    Route::post('/products/{id}/review', [ProductReviewController::class, 'store']);
-});
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/wallet', [WalletController::class, 'wallet']);
@@ -192,12 +225,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
 Route::post('/wallet/webhook', [WalletController::class, 'handleWebhook']);
 
-Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/cart', [CartController::class, 'index']);
-    Route::post('/cart/add', [CartController::class, 'store']);
-    Route::delete('/cart/remove/{item_id}', [CartController::class, 'destroy']);
-    Route::delete('/cart/clear', [CartController::class, 'clear']);
-});
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/verify/initiate', [VerificationController::class, 'initiate']);
@@ -214,27 +241,22 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/food/orders/{id}/status', [FoodOrderController::class, 'updateStatus']);
 });
 
-//ride settings
-Route::get('/ride-settings/base-fare', [RideSettingController::class, 'getBaseFare']);
-
-
 // Ride
+Route::post('/ride/request', [RideController::class, 'requestRide']);
+Route::put('/ride/update-status', [RideController::class, 'updateStatus']);
+Route::get('/ride/history', [RideController::class, 'history']);
+Route::post('/ride/online', [RideController::class, 'goOnline']);
+Route::post('/ride/offline', [RideController::class, 'goOffline']);
 Route::post('/ride/rate', [RideController::class, 'rate']);
-Route::group(['middleware' => 'auth:sanctum'], function () {
-    Route::post('/ride/online', [RideController::class, 'goOnline']);
-    Route::post('/ride/request', [RideController::class, 'requestRide']);
-    Route::put('/ride/update-status', [RideController::class, 'updateStatus']);
-    Route::get('/ride/history', [RideController::class, 'history']);
-    Route::post('/ride/offline', [RideController::class, 'goOffline']);
-});
 
 // Ping
-Route::get('/ping', fn() => response()->json(['message' => 'pong']));
+Route::get('/ping', fn () => response()->json(['message' => 'pong']));
 
 
 Route::middleware('auth:sanctum')->group(function () {
-    Route::post('/apartment/bookings', [BookingController::class, 'store']);
-    Route::get('/apartment/bookings', [BookingController::class, 'index']);
+Route::post('/apartment/bookings', [BookingController::class, 'store']);
+Route::get('/apartment/bookings', [BookingController::class, 'index']);
+
 });
 
 // Maintenance
@@ -243,6 +265,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/maintenance/my-requests', [MaintenanceController::class, 'myRequests']);
     Route::put('/maintenance/update-status', [MaintenanceController::class, 'updateStatus']);
 });
+
+// Ride Settings
+Route::get('/ride/settings', [RideSettingController::class, 'index']);
+Route::middleware('auth:sanctum')->put('/ride/settings', [RideSettingController::class, 'update']);
 
 
 Route::post('/subscribe', [SubscriptionController::class, 'subscribe']);

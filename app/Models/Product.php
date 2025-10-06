@@ -2,46 +2,38 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 
-/**
- * 
- *
- * @property int $id
- * @property int $vendor_id
- * @property int|null $category_id
- * @property string $name
- * @property string|null $description
- * @property string $price
- * @property int $stock
- * @property string|null $image
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
- * @property-read \App\Models\ProductCategory|null $category
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ProductReview> $reviews
- * @property-read int|null $reviews_count
- * @property-read \App\Models\Vendor $vendor
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Product newModelQuery()
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Product newQuery()
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Product query()
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereCategoryId($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereCreatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereDescription($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereId($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereImage($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereName($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Product wherePrice($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereStock($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereUpdatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereVendorId($value)
- * @mixin \Eloquent
- */
 class Product extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
-        'vendor_id', 'category_id', 'name', 'description', 'price', 'stock', 'image', 'condition'
+        'vendor_id',
+        'title',
+        'description',
+        'images', // array of full URLs (Cloudinary)
+        'price',
+        'stock_quantity',
+        'category_id',
+        'condition',
+        'allow_pickup',
+        'allow_shipping',
+        'status',
     ];
 
+    protected $casts = [
+        'images' => 'array',
+        'price' => 'decimal:2',
+        'allow_pickup' => 'boolean',
+        'allow_shipping' => 'boolean',
+    ];
+
+    /**
+     * Relationship to vendor.
+     */
     public function vendor()
     {
         return $this->belongsTo(Vendor::class);
@@ -49,25 +41,33 @@ class Product extends Model
 
     public function category()
     {
-        return $this->belongsTo(ProductCategory::class, 'category_id');
+        return $this->belongsTo(Category::class);
     }
 
-    public function colors()
+    /**
+     * Query scope: only products visible on public marketplace.
+     *
+     * Conditions:
+     *  - product.status = 'active'
+     *  - vendor.is_verified = 1
+     *  - vendor->user.phone_verified_at IS NOT NULL
+     */
+    public function scopePubliclyVisible(Builder $query): Builder
     {
-        return $this->hasMany(ProductColor::class);
+        return $query->where('status', 'active')
+            ->whereHas('vendor', function (Builder $q) {
+                $q->where('is_verified', 1)
+                  ->whereHas('user', function (Builder $u) {
+                      $u->whereNotNull('phone_verified_at');
+                  });
+            });
     }
 
-    public function images()
+    /**
+     * Convenience: return first image (thumbnail) or null.
+     */
+    public function getThumbnailAttribute()
     {
-        return $this->hasMany(ProductImage::class);
-    }
-    public function reviews()
-    {
-        return $this->hasMany(ProductReview::class);
-    }
-
-    public function averageRating()
-    {
-        return $this->reviews()->avg('rating');
+        return $this->images[0] ?? null;
     }
 }

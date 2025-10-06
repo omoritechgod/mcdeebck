@@ -34,8 +34,7 @@ class Vendor extends Model
     public function rider()
     {
         return $this->hasOne(Rider::class);
-    } 
-  
+    }
 
     /**
      * Mechanic profile (if vendor is a mechanic).

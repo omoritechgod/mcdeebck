@@ -8,9 +8,7 @@ return new class extends Migration {
     public function up(): void {
         Schema::create('service_pricings', function (Blueprint $table) {
             $table->id();
-   $table->foreignId('service_vendor_id')
-          ->constrained('service_vendors')
-          ->onDelete('cascade');
+            $table->foreignId('service_vendor_id')->constrained('service_vendors')->onDelete('cascade');
             $table->string('title');               // e.g. "AC Repair"
             $table->decimal('price', 12, 2);       // e.g. 50000.00
             $table->timestamps();

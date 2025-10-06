@@ -5,14 +5,12 @@ namespace App\Http\Controllers\Vendor;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
-use App\Models\Vendor;
 use App\Models\Verification;
 
 class ComplianceController extends Controller
 {
     /**
-     * Get the compliance status for the authenticated vendor.
+     * Get compliance status for the authenticated vendor.
      */
     public function status()
     {
@@ -21,42 +19,39 @@ class ComplianceController extends Controller
         $verification = Verification::where('user_id', $user->id)->latest()->first();
 
         return response()->json([
-            'phone_verified' => !is_null($user->phone_verified_at),
+            'phone_verified'    => !is_null($user->phone_verified_at),
             'phone_verified_at' => $user->phone_verified_at,
             'document_uploaded' => $verification !== null,
-            'document_type' => $verification?->type,
+            'document_type'     => $verification?->type,
             'compliance_status' => $verification?->status,
-            'is_verified' => $vendor?->is_verified ?? 0,
-            'document_url' => $verification ? asset('storage/' . $verification->document_url) : null,
+            'is_verified'       => $vendor?->is_verified ?? 0,
+            'document_url'      => $verification?->document_url, // already Cloudinary URL
         ]);
     }
 
     /**
-     * Upload a compliance document (NIN or CAC).
+     * Save compliance document (URL from frontend).
      */
     public function uploadDocument(Request $request)
     {
         $request->validate([
-            'type' => 'required|in:nin,cac',
-            'document' => 'required|file|mimes:jpg,jpeg,png,pdf|max:2048',
+            'type'         => 'required|in:nin,cac',
+            'document_url' => 'required|url',
         ]);
 
         $user = Auth::user();
 
-        // Store file in storage/app/public/compliance_docs
-        $path = $request->file('document')->store('compliance_docs', 'public');
-
-        // Create verification record
+        // Create verification record with Cloudinary URL
         $verification = Verification::create([
-            'user_id' => $user->id,
-            'type' => $request->type,
-            'document_url' => $path,
-            'status' => 'pending',
+            'user_id'      => $user->id,
+            'type'         => $request->type,
+            'document_url' => $request->document_url,
+            'status'       => 'pending',
         ]);
 
         return response()->json([
-            'message' => 'Document uploaded successfully',
-            'document_url' => asset('storage/' . $path),
+            'message'      => 'Document uploaded successfully',
+            'document_url' => $verification->document_url,
         ]);
     }
 
@@ -76,6 +71,8 @@ class ComplianceController extends Controller
             return response()->json(['message' => 'Already reviewed'], 400);
         }
 
-        return response()->json(['message' => 'Document submitted for review. You’ll be notified once reviewed.']);
+        return response()->json([
+            'message' => 'Document submitted for review. You’ll be notified once reviewed.'
+        ]);
     }
 }

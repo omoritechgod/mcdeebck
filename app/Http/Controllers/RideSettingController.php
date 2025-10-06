@@ -47,37 +47,15 @@ class RideSettingController extends Controller
             'rate_per_km' => 'required|numeric',
         ]);
 
-        $settings = RideSetting::first();
-       if(!$settings){
-            $settings = RideSetting::create([
-                'base_fare' => $request->base_fare,
-                'rate_per_km' => $request->rate_per_km,
-            ]);
-       } else {
-            $settings->update([
-                'base_fare' => $request->base_fare,
-                'rate_per_km' => $request->rate_per_km ?? $settings->rate_per_km
-            ]);
-       }
-
-       return response()->json([
-            'message' => 'Ride settings updated successfully',
-            'settings' => $settings
-       ]);
-    }
-
-    public function getBaseFare()
-    {
-        $settings = RideSetting::first();
-        if(!$settings){
-            return response()->json([
-                'message' => 'Ride setting not configured'
-            ], 400);
+        $setting = RideSetting::first();
+        if (!$setting) {
+            $setting = new RideSetting();
         }
 
-        return response()->json([
-            'base_fare' => $settings->base_fare,
-            'rate_per_km' => $settings->rate_per_km,
-        ]);
+        $setting->base_fare = $request->base_fare;
+        $setting->rate_per_km = $request->rate_per_km;
+        $setting->save();
+
+        return response()->json(['message' => 'Settings updated', 'data' => $setting]);
     }
 }
