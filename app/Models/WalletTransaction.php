@@ -31,7 +31,7 @@ use Illuminate\Database\Eloquent\Model;
  */
 class WalletTransaction extends Model
 {
-    protected $fillable = ['wallet_id', 'type', 'amount', 'ref', 'status'];
+    protected $fillable = ['wallet_id', 'type', 'amount', 'ref', 'status', 'order_id'];
 
     protected $casts = [
         'amount' => 'decimal:2',
@@ -40,5 +40,10 @@ class WalletTransaction extends Model
     public function wallet()
     {
         return $this->belongsTo(Wallet::class);
+    }
+
+    public function foodOrder()
+    {
+        return $this->belongsTo(\App\Models\FoodOrder::class, 'order_id');
     }
 }

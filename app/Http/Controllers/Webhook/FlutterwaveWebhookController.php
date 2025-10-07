@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Log;
 use App\Models\Booking;
 use App\Models\ServiceOrder;
 use App\Models\Order;
+use App\Models\FoodOrder;
 use App\Models\AdminWallet;
 use App\Models\AdminTransaction;
 use App\Models\Wallet;
@@ -60,6 +61,10 @@ class FlutterwaveWebhookController extends Controller
 
                 case 'ecommerce_order':
                     $this->handleEcommerceOrder($payload);
+                    break;
+
+                case 'food_order':
+                    $this->handleFoodOrder($payload);
                     break;
 
                 default:
@@ -209,6 +214,10 @@ class FlutterwaveWebhookController extends Controller
                     $this->handleEcommerceOrder($payload);
                     break;
 
+                case 'food_order':
+                    $this->handleFoodOrder($payload);
+                    break;
+
                 default:
                     return response()->json(['error' => 'Unknown payment type'], 400);
             }
@@ -218,5 +227,67 @@ class FlutterwaveWebhookController extends Controller
         }
 
         return response()->json(['status' => 'success']);
+    }
+
+    private function handleFoodOrder(array $payload): void
+    {
+        $orderId = $payload['data']['meta']['order_id'] ?? null;
+        if (!$orderId) return;
+
+        DB::transaction(function () use ($orderId, $payload) {
+            $order = FoodOrder::with(['user', 'vendor'])->find($orderId);
+
+            if (!$order || $order->payment_status !== FoodOrder::PAYMENT_STATUS_PENDING) {
+                Log::info('FLW Webhook: food order not found or already processed', ['order_id' => $orderId]);
+                return;
+            }
+
+            $order->payment_status = FoodOrder::PAYMENT_STATUS_PAID;
+            $order->status = FoodOrder::STATUS_AWAITING_VENDOR;
+            $order->payment_reference = $payload['data']['tx_ref'] ?? $order->payment_reference;
+            $order->save();
+
+            $totalAmount = (float) $order->total;
+
+            $adminWallet = AdminWallet::firstOrCreate(
+                ['name' => 'Main'],
+                ['balance' => 0.00, 'currency' => config('app.currency', 'NGN')]
+            );
+
+            $adminWallet->increment('balance', $totalAmount);
+
+            AdminTransaction::create([
+                'admin_wallet_id' => $adminWallet->id,
+                'type' => 'credit',
+                'amount' => $totalAmount,
+                'ref' => $payload['data']['tx_ref'] ?? ('flw_food_' . $order->id),
+                'status' => 'success',
+                'meta' => [
+                    'entity' => 'food_order',
+                    'entity_id' => $order->id,
+                    'commission' => $order->commission_amount,
+                ],
+            ]);
+
+            $userWallet = Wallet::firstOrCreate(
+                ['user_id' => $order->user_id],
+                ['balance' => 0.00, 'currency' => config('app.currency', 'NGN')]
+            );
+
+            WalletTransaction::create([
+                'wallet_id' => $userWallet->id,
+                'type' => 'debit',
+                'amount' => $totalAmount,
+                'ref' => $payload['data']['tx_ref'] ?? ('flw_food_' . $order->id),
+                'status' => 'success',
+                'order_id' => $order->id,
+            ]);
+
+            Log::info('FLW Webhook: food order processed successfully', [
+                'order_id' => $order->id,
+                'amount' => $totalAmount,
+                'status' => $order->status
+            ]);
+        });
     }
 }

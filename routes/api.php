@@ -232,13 +232,20 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/verify/status', [VerificationController::class, 'status']);
 });
 
-// Food
+// Food - Public endpoints
+Route::get('/food/vendors', [FoodMenuController::class, 'listVendors']);
+Route::get('/food/vendors/{id}', [FoodMenuController::class, 'getVendor']);
 Route::get('/food/menus', [FoodMenuController::class, 'index']);
+Route::get('/food/menus/{id}', [FoodMenuController::class, 'show']);
+
+// Food - Customer endpoints
 Route::middleware('auth:sanctum')->group(function () {
-    Route::post('/food/menus', [FoodMenuController::class, 'store']);
     Route::post('/food/orders', [FoodOrderController::class, 'store']);
     Route::get('/food/orders', [FoodOrderController::class, 'index']);
-    Route::put('/food/orders/{id}/status', [FoodOrderController::class, 'updateStatus']);
+    Route::get('/food/orders/{id}', [FoodOrderController::class, 'show']);
+    Route::post('/food/orders/{id}/complete', [FoodOrderController::class, 'complete']);
+    Route::post('/food/orders/{id}/cancel', [FoodOrderController::class, 'cancel']);
+    Route::post('/food/orders/{id}/pay', [PaymentController::class, 'payForFoodOrder']);
 });
 
 // Ride

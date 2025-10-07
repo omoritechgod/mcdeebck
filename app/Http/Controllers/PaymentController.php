@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Log;
 
 use App\Models\Booking;
 use App\Models\Order;
+use App\Models\FoodOrder;
 use App\Models\AdminWallet;
 use App\Models\AdminTransaction;
 use App\Models\Wallet;
@@ -16,6 +17,60 @@ use App\Models\WalletTransaction;
 
 class PaymentController extends Controller
 {
+    /**
+     * ========== FOOD ORDER PAYMENT ==========
+     */
+    public function payForFoodOrder($id)
+    {
+        $order = FoodOrder::with('user')->findOrFail($id);
+
+        if ($order->status !== FoodOrder::STATUS_PENDING_PAYMENT) {
+            return response()->json(['error' => 'Order not ready for payment.'], 400);
+        }
+
+        $amount = (float) $order->total;
+        $tx_ref = uniqid('flw_food_');
+
+        $response = Http::withToken(config('services.flutterwave.secret'))
+            ->acceptJson()
+            ->post(rtrim(config('services.flutterwave.payment_url'), '/') . '/payments', [
+                'tx_ref' => $tx_ref,
+                'amount' => $amount,
+                'currency' => config('app.currency', 'NGN'),
+                'redirect_url' => env('FRONTEND_URL') . '/payment-success',
+                'customer' => [
+                    'email' => $order->user->email,
+                    'name'  => $order->user->name,
+                ],
+                'meta' => [
+                    'order_id' => $order->id,
+                    'type'     => 'food_order',
+                ],
+                'customizations' => [
+                    'title' => 'Food Order Payment',
+                    'description' => 'Payment for Food Order #' . $order->id,
+                ]
+            ]);
+
+        Log::info('FLW init food order', [
+            'order_id' => $order->id,
+            'status' => $response->status(),
+            'body' => $response->json(),
+        ]);
+
+        if (!$response->successful()) {
+            return response()->json([
+                'error' => 'Failed to initialize payment',
+                'details' => $response->json()
+            ], 500);
+        }
+
+        $order->payment_reference = $tx_ref;
+        $order->save();
+
+        return response()->json($response->json());
+    }
+
     /**
      * ========== APARTMENT BOOKING ==========
      */
