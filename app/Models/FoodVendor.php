@@ -44,11 +44,42 @@ class FoodVendor extends Model
         'vendor_id',
         'business_name',
         'specialty',
+        'cuisines',
+        'estimated_preparation_time',
         'location',
+        'latitude',
+        'longitude',
         'contact_phone',
         'contact_email',
         'description',
-        'logo'
+        'logo',
+        'operating_hours',
+        'delivery_radius_km',
+        'minimum_order_amount',
+        'delivery_fee',
+        'is_open',
+        'accepts_cash',
+        'accepts_card',
+        'average_rating',
+        'total_reviews',
+        'total_orders'
+    ];
+
+    protected $casts = [
+        'operating_hours' => 'array',
+        'cuisines' => 'array',
+        'delivery_radius_km' => 'decimal:2',
+        'minimum_order_amount' => 'decimal:2',
+        'delivery_fee' => 'decimal:2',
+        'is_open' => 'boolean',
+        'accepts_cash' => 'boolean',
+        'accepts_card' => 'boolean',
+        'average_rating' => 'decimal:2',
+        'total_reviews' => 'integer',
+        'total_orders' => 'integer',
+        'estimated_preparation_time' => 'integer',
+        'latitude' => 'decimal:7',
+        'longitude' => 'decimal:7',
     ];
 
     public function vendor()
