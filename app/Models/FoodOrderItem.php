@@ -38,7 +38,19 @@ class FoodOrderItem extends Model
         'food_menu_id',
         'quantity',
         'price',
+        'total_price',
     ];
+
+    protected $casts = [
+        'price' => 'decimal:2',
+        'total_price' => 'decimal:2',
+        'quantity' => 'integer',
+    ];
+
+    public function menuItem()
+    {
+        return $this->belongsTo(FoodMenu::class, 'food_menu_id');
+    }
 
     public function food()
     {
@@ -47,6 +59,6 @@ class FoodOrderItem extends Model
 
     public function order()
     {
-        return $this->belongsTo(FoodOrder::class);
+        return $this->belongsTo(FoodOrder::class, 'food_order_id');
     }
 }

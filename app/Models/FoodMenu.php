@@ -37,13 +37,54 @@ class FoodMenu extends Model
     protected $fillable = [
         'vendor_id',
         'name',
+        'slug',
         'description',
         'price',
         'image',
+        'preparation_time_minutes',
+        'category',
+        'is_available',
+        'image_urls',
+        'tags',
     ];
+
+    protected $casts = [
+        'price' => 'decimal:2',
+        'is_available' => 'boolean',
+        'image_urls' => 'array',
+        'tags' => 'array',
+        'preparation_time_minutes' => 'integer',
+    ];
+
+    protected $appends = ['estimated_time'];
 
     public function vendor()
     {
         return $this->belongsTo(Vendor::class);
+    }
+
+    public function foodVendor()
+    {
+        return $this->belongsTo(FoodVendor::class, 'vendor_id', 'vendor_id');
+    }
+
+    public function orderItems()
+    {
+        return $this->hasMany(FoodOrderItem::class);
+    }
+
+    public function getEstimatedTimeAttribute()
+    {
+        return $this->preparation_time_minutes . ' mins';
+    }
+
+    public function scopeAvailable($query)
+    {
+        return $query->where('is_available', true);
+    }
+
+    public function scopeByCategory($query, $category)
+    {
+        return $query->where('category', $category);
     }
 }

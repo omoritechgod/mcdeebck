@@ -55,4 +55,24 @@ class FoodVendor extends Model
     {
         return $this->belongsTo(Vendor::class);
     }
+
+    public function menuItems()
+    {
+        return $this->hasMany(FoodMenu::class, 'vendor_id', 'vendor_id');
+    }
+
+    public function orders()
+    {
+        return $this->hasMany(FoodOrder::class, 'vendor_id', 'vendor_id');
+    }
+
+    public function scopeLive($query)
+    {
+        return $query->whereHas('vendor', function($q) {
+            $q->where('is_verified', true)
+              ->whereHas('user', function($u) {
+                  $u->whereNotNull('phone_verified_at');
+              });
+        });
+    }
 }
