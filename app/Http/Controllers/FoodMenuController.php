@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\FoodMenu;
 use App\Models\FoodVendor;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -18,30 +17,6 @@ class FoodMenuController extends Controller
      *     path="/api/food/vendors",
      *     summary="List all live food vendors",
      *     tags={"Food Menu"},
-     *     @OA\Parameter(
-     *         name="latitude",
-     *         in="query",
-     *         description="User latitude for distance calculation",
-     *         @OA\Schema(type="number", format="float")
-     *     ),
-     *     @OA\Parameter(
-     *         name="longitude",
-     *         in="query",
-     *         description="User longitude for distance calculation",
-     *         @OA\Schema(type="number", format="float")
-     *     ),
-     *     @OA\Parameter(
-     *         name="cuisine",
-     *         in="query",
-     *         description="Filter by cuisine type",
-     *         @OA\Schema(type="string")
-     *     ),
-     *     @OA\Parameter(
-     *         name="is_open",
-     *         in="query",
-     *         description="Filter by open status",
-     *         @OA\Schema(type="boolean")
-     *     ),
      *     @OA\Response(response=200, description="Success")
      * )
      */
@@ -92,23 +67,51 @@ class FoodMenuController extends Controller
 
     /**
      * @OA\Get(
+     *     path="/api/food/vendors-with-menus",
+     *     summary="List all live vendors with sample menu items",
+     *     tags={"Food Menu"},
+     *     @OA\Response(response=200, description="Success")
+     * )
+     */
+    public function vendorsWithMenus(Request $request)
+    {
+        $vendors = FoodVendor::with(['menuItems' => function ($query) {
+            $query->available()
+                ->select([
+                    'id', 'vendor_id', 'name', 'price', 'image',
+                    'category', 'is_available'
+                ])
+                ->limit(3);
+        }])
+        ->live()
+        ->where('is_open', true)
+        ->select([
+            'id', 'vendor_id', 'business_name', 'specialty', 'cuisines',
+            'location', 'latitude', 'longitude', 'estimated_preparation_time',
+            'delivery_radius_km', 'minimum_order_amount', 'delivery_fee',
+            'is_open', 'logo', 'average_rating', 'total_reviews', 'total_orders'
+        ])
+        ->get();
+
+        return response()->json([
+            'vendors' => $vendors
+        ]);
+    }
+
+    /**
+     * @OA\Get(
      *     path="/api/food/vendors/{id}",
      *     summary="Get vendor detail with menu",
      *     tags={"Food Menu"},
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         required=true,
-     *         @OA\Schema(type="integer")
-     *     ),
      *     @OA\Response(response=200, description="Success")
      * )
      */
     public function getVendor($id)
     {
+        // We want to fetch using vendor_id, not the model's id
         $vendor = FoodVendor::with([
             'vendor.user:id,name,email',
-            'menuItems' => function($query) {
+            'menuItems' => function ($query) {
                 $query->available()->select([
                     'id', 'vendor_id', 'name', 'slug', 'description', 'price',
                     'image', 'image_urls', 'preparation_time_minutes', 'category',
@@ -116,51 +119,23 @@ class FoodMenuController extends Controller
                 ]);
             }
         ])
-        ->live()
-        ->findOrFail($id);
+            ->live()
+            ->where('vendor_id', $id)
+            ->firstOrFail();
 
         $vendor->makeHidden(['contact_phone', 'contact_email']);
 
         return response()->json([
-            'vendor' => $vendor
+            'vendor' => $vendor,
         ]);
     }
+
 
     /**
      * @OA\Get(
      *     path="/api/food/menus",
      *     summary="Browse all available menu items",
      *     tags={"Food Menu"},
-     *     @OA\Parameter(
-     *         name="category",
-     *         in="query",
-     *         description="Filter by category",
-     *         @OA\Schema(type="string")
-     *     ),
-     *     @OA\Parameter(
-     *         name="vendor_id",
-     *         in="query",
-     *         description="Filter by vendor ID",
-     *         @OA\Schema(type="integer")
-     *     ),
-     *     @OA\Parameter(
-     *         name="search",
-     *         in="query",
-     *         description="Search menu items by name",
-     *         @OA\Schema(type="string")
-     *     ),
-     *     @OA\Parameter(
-     *         name="min_price",
-     *         in="query",
-     *         description="Minimum price",
-     *         @OA\Schema(type="number")
-     *     ),
-     *     @OA\Parameter(
-     *         name="max_price",
-     *         in="query",
-     *         description="Maximum price",
-     *         @OA\Schema(type="number")
-     *     ),
      *     @OA\Response(response=200, description="Success")
      * )
      */
@@ -203,12 +178,6 @@ class FoodMenuController extends Controller
      *     path="/api/food/menus/{id}",
      *     summary="Get menu item detail",
      *     tags={"Food Menu"},
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         required=true,
-     *         @OA\Schema(type="integer")
-     *     ),
      *     @OA\Response(response=200, description="Success")
      * )
      */
@@ -224,22 +193,21 @@ class FoodMenuController extends Controller
     }
 
     /**
-     * Calculate distance between two coordinates using Haversine formula
+     * Calculate distance between two coordinates (Haversine formula)
      */
     private function calculateDistance($lat1, $lon1, $lat2, $lon2)
     {
-        $earthRadius = 6371;
+        $earthRadius = 6371; // km
 
         $dLat = deg2rad($lat2 - $lat1);
         $dLon = deg2rad($lon2 - $lon1);
 
-        $a = sin($dLat/2) * sin($dLat/2) +
-             cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
-             sin($dLon/2) * sin($dLon/2);
+        $a = sin($dLat / 2) * sin($dLat / 2) +
+            cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
+            sin($dLon / 2) * sin($dLon / 2);
 
-        $c = 2 * atan2(sqrt($a), sqrt(1-$a));
-        $distance = $earthRadius * $c;
+        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
 
-        return round($distance, 2);
+        return round($earthRadius * $c, 2);
     }
 }

@@ -16,44 +16,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
- * @OA\Tag(name="Food Orders", description="Food Order APIs for customers")
+ * @OA\Tag(name="Food Orders", description="Food Order APIs for customers and vendors")
  */
 class FoodOrderController extends Controller
 {
     /**
-     * @OA\Post(
-     *     path="/api/food/orders",
-     *     summary="Create a food order",
-     *     tags={"Food Orders"},
-     *     security={{"sanctum":{}}},
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             required={"vendor_id", "items", "delivery_method", "shipping_address"},
-     *             @OA\Property(property="vendor_id", type="integer", example=1),
-     *             @OA\Property(
-     *                 property="items",
-     *                 type="array",
-     *                 @OA\Items(
-     *                     @OA\Property(property="menu_id", type="integer", example=5),
-     *                     @OA\Property(property="quantity", type="integer", example=2)
-     *                 )
-     *             ),
-     *             @OA\Property(property="delivery_method", type="string", enum={"delivery", "pickup", "offline_rider"}, example="delivery"),
-     *             @OA\Property(
-     *                 property="shipping_address",
-     *                 type="object",
-     *                 @OA\Property(property="address", type="string", example="123 Main St"),
-     *                 @OA\Property(property="city", type="string", example="Lagos"),
-     *                 @OA\Property(property="phone", type="string", example="08012345678"),
-     *                 @OA\Property(property="latitude", type="number", example=6.5244),
-     *                 @OA\Property(property="longitude", type="number", example=3.3792)
-     *             ),
-     *             @OA\Property(property="tip_amount", type="number", example=500)
-     *         )
-     *     ),
-     *     @OA\Response(response=201, description="Order created successfully")
-     * )
+     * Create a food order - user places an order pending vendor approval.
      */
     public function store(Request $request)
     {
@@ -76,7 +44,6 @@ class FoodOrderController extends Controller
         $vendorId = $request->vendor_id;
 
         $foodVendor = FoodVendor::where('vendor_id', $vendorId)->first();
-
         if (!$foodVendor) {
             return response()->json(['error' => 'Food vendor not found'], 404);
         }
@@ -116,6 +83,7 @@ class FoodOrderController extends Controller
             ];
         }
 
+        // ✅ Enforce minimum order total
         if ($subtotal < $foodVendor->minimum_order_amount) {
             return response()->json([
                 'error' => "Minimum order amount is NGN {$foodVendor->minimum_order_amount}",
@@ -124,32 +92,11 @@ class FoodOrderController extends Controller
             ], 400);
         }
 
-        $deliveryFee = 0;
-        if ($request->delivery_method === 'delivery') {
-            if ($request->has('shipping_address.latitude') && $request->has('shipping_address.longitude')) {
-                $distance = $this->calculateDistance(
-                    (float) $foodVendor->latitude,
-                    (float) $foodVendor->longitude,
-                    (float) $request->input('shipping_address.latitude'),
-                    (float) $request->input('shipping_address.longitude')
-                );
-
-                if ($distance > $foodVendor->delivery_radius_km) {
-                    return response()->json([
-                        'error' => 'Delivery address is outside vendor delivery radius',
-                        'distance_km' => $distance,
-                        'max_delivery_radius_km' => $foodVendor->delivery_radius_km,
-                    ], 400);
-                }
-            }
-
-            $deliveryFee = $foodVendor->delivery_fee;
-        }
-
+        // ✅ Delivery fee and tip calculation
+        $deliveryFee = $request->delivery_method === 'delivery' ? $foodVendor->delivery_fee : 0;
         $tipAmount = $request->input('tip_amount', 0);
         $commissionRate = (float) config('commissions.food', 10) / 100;
         $commissionAmount = round($subtotal * $commissionRate, 2);
-
         $totalAmount = $subtotal + $deliveryFee + $tipAmount;
 
         DB::beginTransaction();
@@ -162,7 +109,7 @@ class FoodOrderController extends Controller
                 'delivery_fee' => $deliveryFee,
                 'commission_amount' => $commissionAmount,
                 'payment_status' => FoodOrder::PAYMENT_STATUS_PENDING,
-                'status' => FoodOrder::STATUS_PENDING_PAYMENT,
+                'status' => FoodOrder::STATUS_AWAITING_VENDOR,
                 'delivery_method' => $request->delivery_method,
                 'shipping_address' => $request->shipping_address,
             ]);
@@ -180,15 +127,15 @@ class FoodOrderController extends Controller
             DB::commit();
 
             return response()->json([
-                'message' => 'Order created successfully',
+                'message' => 'Order created successfully, awaiting vendor approval.',
                 'order' => $order->load('items.menuItem', 'foodVendor'),
-                'payment_required' => true,
+                'awaiting_vendor' => true,
             ], 201);
 
         } catch (\Throwable $e) {
             DB::rollBack();
             Log::error('Food order creation failed', [
-                'user_id' => $user->id,
+                'user_id' => $user->id ?? null,
                 'vendor_id' => $vendorId,
                 'error' => $e->getMessage()
             ]);
@@ -201,19 +148,7 @@ class FoodOrderController extends Controller
     }
 
     /**
-     * @OA\Get(
-     *     path="/api/food/orders",
-     *     summary="List user's food orders",
-     *     tags={"Food Orders"},
-     *     security={{"sanctum":{}}},
-     *     @OA\Parameter(
-     *         name="status",
-     *         in="query",
-     *         description="Filter by status",
-     *         @OA\Schema(type="string")
-     *     ),
-     *     @OA\Response(response=200, description="Success")
-     * )
+     * List user's food orders.
      */
     public function index(Request $request)
     {
@@ -229,30 +164,21 @@ class FoodOrderController extends Controller
 
         $orders = $query->latest()->paginate(20);
 
-        $orders->getCollection()->transform(function ($order) {
-            if ($order->payment_status !== FoodOrder::PAYMENT_STATUS_PAID) {
-                $order->foodVendor->makeHidden(['contact_phone', 'contact_email']);
-            }
-            return $order;
-        });
+        // ✅ Fix: Properly handle collection transformation to avoid IDE red underline
+        $orders->setCollection(
+            $orders->getCollection()->map(function ($order) {
+                if ($order->payment_status !== FoodOrder::PAYMENT_STATUS_PAID) {
+                    $order->foodVendor->makeHidden(['contact_phone', 'contact_email']);
+                }
+                return $order;
+            })
+        );
 
         return response()->json($orders);
     }
 
     /**
-     * @OA\Get(
-     *     path="/api/food/orders/{id}",
-     *     summary="Get food order detail",
-     *     tags={"Food Orders"},
-     *     security={{"sanctum":{}}},
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         required=true,
-     *         @OA\Schema(type="integer")
-     *     ),
-     *     @OA\Response(response=200, description="Success")
-     * )
+     * Get food order detail for a user.
      */
     public function show($id)
     {
@@ -273,40 +199,83 @@ class FoodOrderController extends Controller
             }
         }
 
+        return response()->json(['order' => $order]);
+    }
+
+    /**
+     * Vendor views their own food orders.
+     */
+    public function vendorOrders(Request $request)
+    {
+        $vendor = Auth::user()->vendor;
+        if (!$vendor) {
+            return response()->json(['error' => 'Not authorized as vendor'], 403);
+        }
+
+        $query = FoodOrder::with(['items.menuItem', 'user:id,name,email'])
+            ->where('vendor_id', $vendor->id);
+
+        if ($request->has('status')) {
+            $query->byStatus($request->status);
+        }
+
+        $orders = $query->latest()->paginate(20);
+        return response()->json(['orders' => $orders]);
+    }
+
+    /**
+     * Vendor accepts an order (user can now proceed to payment).
+     */
+    public function acceptOrder($id)
+    {
+        $vendor = Auth::user()->vendor;
+        $order = FoodOrder::where('vendor_id', $vendor->id)->findOrFail($id);
+
+        if ($order->status !== FoodOrder::STATUS_AWAITING_VENDOR) {
+            return response()->json(['error' => 'Order cannot be accepted at this stage'], 400);
+        }
+
+        $order->update(['status' => FoodOrder::STATUS_ACCEPTED]);
+
         return response()->json([
+            'message' => 'Order accepted. User can now proceed to payment.',
             'order' => $order
         ]);
     }
 
     /**
-     * @OA\Post(
-     *     path="/api/food/orders/{id}/complete",
-     *     summary="Mark order as completed and release escrow",
-     *     tags={"Food Orders"},
-     *     security={{"sanctum":{}}},
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         required=true,
-     *         @OA\Schema(type="integer")
-     *     ),
-     *     @OA\Response(response=200, description="Order completed and payment released")
-     * )
+     * Vendor rejects an order before payment.
+     */
+    public function rejectOrder($id)
+    {
+        $vendor = Auth::user()->vendor;
+        $order = FoodOrder::where('vendor_id', $vendor->id)->findOrFail($id);
+
+        if (!in_array($order->status, [FoodOrder::STATUS_AWAITING_VENDOR, FoodOrder::STATUS_ACCEPTED])) {
+            return response()->json(['error' => 'Order cannot be rejected at this stage'], 400);
+        }
+
+        $order->update([
+            'status' => FoodOrder::STATUS_CANCELLED,
+            'payment_status' => FoodOrder::PAYMENT_STATUS_REFUNDED,
+        ]);
+
+        return response()->json(['message' => 'Order rejected successfully']);
+    }
+
+    /**
+     * Mark order as completed and release escrow.
      */
     public function complete($id)
     {
         $order = FoodOrder::where('user_id', Auth::id())->findOrFail($id);
 
         if ($order->status !== FoodOrder::STATUS_DELIVERED) {
-            return response()->json([
-                'error' => 'Order must be delivered before completion'
-            ], 422);
+            return response()->json(['error' => 'Order must be delivered before completion'], 422);
         }
 
         if ($order->payment_status !== FoodOrder::PAYMENT_STATUS_PAID) {
-            return response()->json([
-                'error' => 'Order payment not confirmed'
-            ], 422);
+            return response()->json(['error' => 'Order payment not confirmed'], 422);
         }
 
         DB::beginTransaction();
@@ -327,8 +296,8 @@ class FoodOrderController extends Controller
                 return response()->json(['error' => 'Escrow insufficient for payout'], 500);
             }
 
-            $adminWallet->balance -= $vendorShare;
-            $adminWallet->save();
+            // ✅ Debit admin wallet for vendor payout
+            $adminWallet->decrement('balance', $vendorShare);
 
             AdminTransaction::create([
                 'admin_wallet_id' => $adminWallet->id,
@@ -339,13 +308,13 @@ class FoodOrderController extends Controller
                 'meta' => ['order_id' => $order->id, 'type' => 'vendor_payout'],
             ]);
 
+            // ✅ Credit vendor wallet
             $vendorWallet = Wallet::firstOrCreate(
                 ['user_id' => $order->vendor->user_id],
                 ['balance' => 0.00, 'currency' => config('app.currency', 'NGN')]
             );
 
-            $vendorWallet->balance += $vendorShare;
-            $vendorWallet->save();
+            $vendorWallet->increment('balance', $vendorShare);
 
             WalletTransaction::create([
                 'wallet_id' => $vendorWallet->id,
@@ -355,11 +324,11 @@ class FoodOrderController extends Controller
                 'status' => 'success',
             ]);
 
+            // ✅ Rider payout (if applicable)
             if ($order->rider_id && ($deliveryFee > 0 || $tipAmount > 0)) {
                 $riderPayout = $deliveryFee + $tipAmount;
 
-                $adminWallet->balance -= $riderPayout;
-                $adminWallet->save();
+                $adminWallet->decrement('balance', $riderPayout);
 
                 AdminTransaction::create([
                     'admin_wallet_id' => $adminWallet->id,
@@ -375,8 +344,7 @@ class FoodOrderController extends Controller
                     ['balance' => 0.00, 'currency' => config('app.currency', 'NGN')]
                 );
 
-                $riderWallet->balance += $riderPayout;
-                $riderWallet->save();
+                $riderWallet->increment('balance', $riderPayout);
 
                 WalletTransaction::create([
                     'wallet_id' => $riderWallet->id,
@@ -387,11 +355,9 @@ class FoodOrderController extends Controller
                 ]);
             }
 
-            $order->status = FoodOrder::STATUS_COMPLETED;
-            $order->save();
+            $order->update(['status' => FoodOrder::STATUS_COMPLETED]);
 
             DB::commit();
-
             return response()->json([
                 'message' => 'Order completed and payment released',
                 'order' => $order->fresh()
@@ -403,40 +369,16 @@ class FoodOrderController extends Controller
                 'order_id' => $order->id,
                 'error' => $e->getMessage()
             ]);
-
-            return response()->json([
-                'error' => 'Failed to complete order'
-            ], 500);
+            return response()->json(['error' => 'Failed to complete order'], 500);
         }
     }
 
     /**
-     * @OA\Post(
-     *     path="/api/food/orders/{id}/cancel",
-     *     summary="Cancel food order",
-     *     tags={"Food Orders"},
-     *     security={{"sanctum":{}}},
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         required=true,
-     *         @OA\Schema(type="integer")
-     *     ),
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             @OA\Property(property="reason", type="string", example="Changed my mind")
-     *         )
-     *     ),
-     *     @OA\Response(response=200, description="Order cancelled")
-     * )
+     * Cancel a food order.
      */
     public function cancel(Request $request, $id)
     {
-        $request->validate([
-            'reason' => 'nullable|string|max:500'
-        ]);
-
+        $request->validate(['reason' => 'nullable|string|max:500']);
         $order = FoodOrder::where('user_id', Auth::id())->findOrFail($id);
 
         if (!in_array($order->status, [
@@ -444,16 +386,13 @@ class FoodOrderController extends Controller
             FoodOrder::STATUS_AWAITING_VENDOR,
             FoodOrder::STATUS_ACCEPTED
         ])) {
-            return response()->json([
-                'error' => 'Order cannot be cancelled at this stage'
-            ], 422);
+            return response()->json(['error' => 'Order cannot be cancelled at this stage'], 422);
         }
 
         DB::beginTransaction();
         try {
             if ($order->payment_status === FoodOrder::PAYMENT_STATUS_PAID) {
                 $adminWallet = AdminWallet::where('name', 'Main')->firstOrFail();
-
                 $refundAmount = (float) $order->total;
 
                 if ($adminWallet->balance < $refundAmount) {
@@ -461,8 +400,7 @@ class FoodOrderController extends Controller
                     return response()->json(['error' => 'Escrow insufficient for refund'], 500);
                 }
 
-                $adminWallet->balance -= $refundAmount;
-                $adminWallet->save();
+                $adminWallet->decrement('balance', $refundAmount);
 
                 AdminTransaction::create([
                     'admin_wallet_id' => $adminWallet->id,
@@ -476,11 +414,9 @@ class FoodOrderController extends Controller
                 $order->payment_status = FoodOrder::PAYMENT_STATUS_REFUNDED;
             }
 
-            $order->status = FoodOrder::STATUS_CANCELLED;
-            $order->save();
+            $order->update(['status' => FoodOrder::STATUS_CANCELLED]);
 
             DB::commit();
-
             return response()->json([
                 'message' => 'Order cancelled successfully',
                 'order' => $order->fresh()
@@ -493,26 +429,19 @@ class FoodOrderController extends Controller
                 'error' => $e->getMessage()
             ]);
 
-            return response()->json([
-                'error' => 'Failed to cancel order'
-            ], 500);
+            return response()->json(['error' => 'Failed to cancel order'], 500);
         }
     }
 
     private function calculateDistance($lat1, $lon1, $lat2, $lon2)
     {
         $earthRadius = 6371;
-
         $dLat = deg2rad($lat2 - $lat1);
         $dLon = deg2rad($lon2 - $lon1);
-
-        $a = sin($dLat/2) * sin($dLat/2) +
+        $a = sin($dLat / 2) ** 2 +
              cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
-             sin($dLon/2) * sin($dLon/2);
-
-        $c = 2 * atan2(sqrt($a), sqrt(1-$a));
-        $distance = $earthRadius * $c;
-
-        return round($distance, 2);
+             sin($dLon / 2) ** 2;
+        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
+        return round($earthRadius * $c, 2);
     }
 }

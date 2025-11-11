@@ -39,49 +39,30 @@ class Rider extends Model
 {
     use HasFactory;
 
-    const STATUS_PENDING = 'pending';
-    const STATUS_ACTIVE = 'active';
-    const STATUS_SUSPENDED = 'suspended';
-
     protected $fillable = [
         'user_id',
         'vendor_id',
-        'status',
-        'vehicle_type',
+        'status',          // e.g., 'active', 'pending', 'suspended'
+        'vehicle_type',    // e.g., bike, tricycle, car
         'license_number',
-        'experience_years',
-        'is_available',
-        'current_latitude',
-        'current_longitude',
+        'experience_years'
     ];
 
-    protected $casts = [
-        'is_available' => 'boolean',
-        'experience_years' => 'integer',
-    ];
+    // Relationships
 
+    /**
+     * Link to the user account.
+     */
     public function user()
     {
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * Link to the vendor entry for tracking category and verification.
+     */
     public function vendor()
     {
         return $this->belongsTo(Vendor::class);
-    }
-
-    public function foodOrders()
-    {
-        return $this->hasMany(FoodOrder::class);
-    }
-
-    public function scopeAvailable($query)
-    {
-        return $query->where('is_available', true)->where('status', self::STATUS_ACTIVE);
-    }
-
-    public function scopeActive($query)
-    {
-        return $query->where('status', self::STATUS_ACTIVE);
     }
 }

@@ -20,6 +20,39 @@ class ProductController extends Controller
      *  - sort: newest | price_asc | price_desc
      *  - per_page (default 20)
      */
+        public function show($id)
+    {
+        $product = Product::with(['category', 'vendor'])
+            ->publiclyVisible()
+            ->find($id);
+
+        if (! $product) {
+            return response()->json(['message' => 'Product not found'], 404);
+        }
+
+        return response()->json([
+            'id' => $product->id,
+            'title' => $product->title,
+            'description' => $product->description,
+            'price' => $product->price,
+            'stock_quantity' => $product->stock_quantity,
+            'condition' => $product->condition,
+            'allow_pickup' => $product->allow_pickup,
+            'allow_shipping' => $product->allow_shipping,
+            'images' => $product->images,
+            'category' => $product->category ? [
+                'id' => $product->category->id,
+                'name' => $product->category->name,
+                'slug' => $product->category->slug,
+            ] : null,
+            'vendor' => $product->vendor ? [
+                'id' => $product->vendor->id,
+                'business_name' => $product->vendor->business_name,
+                'category' => $product->vendor->category,
+            ] : null,
+        ]);
+    }
+
     public function index(Request $request)
     {
         $validated = $request->validate([

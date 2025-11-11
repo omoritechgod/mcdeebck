@@ -207,6 +207,7 @@ Route::post('/log-error', [ErrorLogController::class, 'store']);
 Route::get('/test-api', fn () => 'API working');
 
 
+Route::get('/food/vendors-with-menus', [FoodMenuController::class, 'vendorsWithMenus']);
 
 
 Route::middleware('auth:sanctum')->prefix('user')->group(function () {
